@@ -77,23 +77,67 @@ function ConflictMarker({ conflict, onSelect }: ConflictMarkerProps) {
   const lat = (conflict as any)._offsetLat ?? conflict.latitude;
   const lon = (conflict as any)._offsetLon ?? conflict.longitude;
   const pos = useMemo(() => latLonToVector3(lat, lon, 2.03), [lat, lon]);
-  const color = severityColor(conflict.severity);
+  const color = useMemo(() => new THREE.Color(severityColor(conflict.severity)), [conflict.severity]);
   const [hovered, setHovered] = useState(false);
-  const ref = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+  const beamRef = useRef<THREE.Mesh>(null);
   const { gl } = useThree();
 
+  // Pulse animation
+  useFrame(() => {
+    if (ringRef.current) {
+      const pulse = 1 + Math.sin(Date.now() * 0.004) * 0.4;
+      ringRef.current.scale.setScalar(pulse);
+      (ringRef.current.material as THREE.MeshBasicMaterial).opacity = 0.35 - Math.sin(Date.now() * 0.004) * 0.15;
+    }
+    if (beamRef.current) {
+      const glow = 0.15 + Math.sin(Date.now() * 0.003 + 1) * 0.1;
+      (beamRef.current.material as THREE.MeshBasicMaterial).opacity = glow;
+    }
+  });
+
+  // Orient the marker to face outward from globe center
+  const normal = useMemo(() => pos.clone().normalize(), [pos]);
+  const quaternion = useMemo(() => {
+    const q = new THREE.Quaternion();
+    q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+    return q;
+  }, [normal]);
+
   return (
-    <mesh
-      ref={ref}
+    <group
+      ref={groupRef}
       position={pos}
-      scale={hovered ? 1.5 : 1}
+      quaternion={quaternion}
       onClick={(e) => { e.stopPropagation(); onSelect(conflict); }}
       onPointerOver={() => { setHovered(true); gl.domElement.style.cursor = 'pointer'; }}
       onPointerOut={() => { setHovered(false); gl.domElement.style.cursor = 'auto'; }}
     >
-      <sphereGeometry args={[0.02, 12, 12]} />
-      <meshBasicMaterial color={color} transparent opacity={0.95} />
-    </mesh>
+      {/* Core dot */}
+      <mesh scale={hovered ? 1.6 : 1}>
+        <sphereGeometry args={[0.015, 16, 16]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+
+      {/* Inner glow */}
+      <mesh scale={hovered ? 2.2 : 1.5}>
+        <sphereGeometry args={[0.015, 16, 16]} />
+        <meshBasicMaterial color={color} transparent opacity={0.3} />
+      </mesh>
+
+      {/* Pulsing ring */}
+      <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.025, 0.035, 32]} />
+        <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Vertical beam / spike */}
+      <mesh ref={beamRef} position={[0, 0.04, 0]}>
+        <cylinderGeometry args={[0.002, 0.0005, 0.06, 8]} />
+        <meshBasicMaterial color={color} transparent opacity={0.2} />
+      </mesh>
+    </group>
   );
 }
 
