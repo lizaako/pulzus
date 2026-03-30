@@ -8,9 +8,9 @@ interface NavigationProps {
 }
 
 const items: { id: View; label: string; icon: React.ReactNode }[] = [
-  { id: 'globe', label: 'GLOBE', icon: <Globe2 className="w-4 h-4" /> },
-  { id: 'news', label: 'NEWS', icon: <Newspaper className="w-4 h-4" /> },
-  { id: 'markets', label: 'MARKETS', icon: <TrendingUp className="w-4 h-4" /> },
+  { id: 'globe', label: 'TÉRKÉP', icon: <Globe2 className="w-4 h-4" /> },
+  { id: 'news', label: 'HÍREK', icon: <Newspaper className="w-4 h-4" /> },
+  { id: 'markets', label: 'PIACOK', icon: <TrendingUp className="w-4 h-4" /> },
 ];
 
 export default function Navigation({ current, onChange }: NavigationProps) {

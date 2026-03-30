@@ -41,7 +41,7 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
   if (loading) {
     return (
       <div className="glass-panel p-6 h-full flex items-center justify-center">
-        <div className="animate-pulse-glow text-primary font-display text-sm">LOADING INTEL...</div>
+        <div className="animate-pulse-glow text-primary font-display text-sm">BETÖLTÉS...</div>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
   return (
     <div className="glass-panel h-full flex flex-col">
       <div className="p-4 border-b border-border/50">
-        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📰 NEWS FEED</h2>
+        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📰 HÍRFOLYAM</h2>
       </div>
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-3">
@@ -88,7 +88,7 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
 
               {article.affects_hungary && article.hungary_impact && (
                 <div className="mt-1 p-2 rounded bg-destructive/5 border border-destructive/10">
-                  <p className="text-[10px] text-destructive font-semibold mb-0.5">🇭🇺 Impact on Hungary</p>
+                  <p className="text-[10px] text-destructive font-semibold mb-0.5">🇭🇺 Hatás Magyarországra</p>
                   <p className="text-[10px] text-muted-foreground">{article.hungary_impact}</p>
                 </div>
               )}

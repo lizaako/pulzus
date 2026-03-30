@@ -15,7 +15,7 @@ interface ChartPanelProps {
 
 const chartConfig: ChartConfig = {
   price: {
-    label: 'Price',
+    label: 'Ár',
     color: 'hsl(195 100% 50%)',
   },
 };
@@ -35,7 +35,7 @@ export default function ChartPanel({ symbols }: ChartPanelProps) {
   return (
     <div className="glass-panel p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📈 CHART</h2>
+        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📈 GRAFIKON</h2>
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
@@ -50,11 +50,11 @@ export default function ChartPanel({ symbols }: ChartPanelProps) {
 
       {loading ? (
         <div className="h-48 flex items-center justify-center">
-          <div className="animate-pulse-glow text-primary font-display text-xs">LOADING...</div>
+          <div className="animate-pulse-glow text-primary font-display text-xs">BETÖLTÉS...</div>
         </div>
       ) : chartData.length === 0 ? (
         <div className="h-48 flex items-center justify-center text-muted-foreground text-xs">
-          No data for {selected}
+          Nincs adat: {selected}
         </div>
       ) : (
         <ChartContainer config={chartConfig} className="h-48 w-full">

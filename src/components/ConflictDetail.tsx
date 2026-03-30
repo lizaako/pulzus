@@ -44,7 +44,7 @@ export default function ConflictDetail({ conflict, onClose }: ConflictDetailProp
         {conflict.fatalities > 0 && (
           <div className="flex items-center gap-2 text-destructive">
             <Users className="w-3.5 h-3.5" />
-            <span>{conflict.fatalities} fatalities</span>
+            <span>{conflict.fatalities} áldozat</span>
           </div>
         )}
       </div>
@@ -52,7 +52,7 @@ export default function ConflictDetail({ conflict, onClose }: ConflictDetailProp
       <p className="text-sm text-muted-foreground leading-relaxed">{conflict.description}</p>
 
       <div className="text-xs text-muted-foreground/60">
-        Source: {conflict.source}
+        Forrás: {conflict.source}
       </div>
     </div>
   );

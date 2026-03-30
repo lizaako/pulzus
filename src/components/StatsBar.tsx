@@ -16,31 +16,31 @@ export default function StatsBar({ articles, conflicts }: StatsBarProps) {
   const stats = [
     {
       icon: <Globe2 className="w-4 h-4" />,
-      label: 'CONFLICTS',
+      label: 'KONFLIKTUSOK',
       value: conflicts.length,
       color: 'text-primary',
     },
     {
       icon: <AlertTriangle className="w-4 h-4" />,
-      label: 'HIGH SEVERITY',
+      label: 'MAGAS SZINTŰ',
       value: highConflicts,
       color: 'text-destructive',
     },
     {
       icon: <Newspaper className="w-4 h-4" />,
-      label: 'ARTICLES',
+      label: 'CIKKEK',
       value: articles.length,
       color: 'text-secondary',
     },
     {
       icon: <Activity className="w-4 h-4" />,
-      label: 'AVG SENTIMENT',
+      label: 'ÁTL. HANGULAT',
       value: avgSentiment.toFixed(2),
       color: avgSentiment >= 0 ? 'text-success' : 'text-destructive',
     },
     {
       icon: <span className="text-sm">🇭🇺</span>,
-      label: 'HU IMPACT',
+      label: 'HU HATÁS',
       value: hungaryArticles,
       color: 'text-destructive',
     },

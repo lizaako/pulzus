@@ -31,15 +31,15 @@ export default function Index() {
       <header className="relative z-10 flex items-center justify-between px-6 py-4">
         <div>
           <h1 className="font-display text-xl font-black text-primary glow-text tracking-widest">
-            HUNGRYPULSE
+            PULZUS
           </h1>
           <p className="text-[10px] text-muted-foreground tracking-[0.3em] mt-0.5">
-            GLOBAL INTELLIGENCE DASHBOARD
+            GLOBÁLIS HÍRKÖZPONT
           </p>
         </div>
         <Navigation current={view} onChange={setView} />
         <div className="text-[10px] text-muted-foreground font-mono">
-          {new Date().toLocaleString()} • LIVE
+          {new Date().toLocaleString('hu-HU')} • ÉLŐ
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-success ml-1.5 animate-pulse-glow" />
         </div>
       </header>
