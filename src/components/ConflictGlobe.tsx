@@ -96,7 +96,7 @@ function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
       <directionalLight position={[5, 3, 5]} intensity={1} color="#ffffff" />
       <pointLight position={[-5, -3, -5]} intensity={0.3} color="#0088ff" />
 
-      <OceanSphere />
+      {/* Earth with texture */}
       <EarthMesh />
       <AtmosphereGlow />
 
