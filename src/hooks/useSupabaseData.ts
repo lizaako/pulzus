@@ -153,10 +153,13 @@ export function useMarketHistory(symbol: string) {
 
   const fetchHistory = useCallback(async () => {
     if (!symbol) return;
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     const { data } = await supabase
       .from('market_data')
       .select('*')
       .eq('symbol', symbol)
+      .gte('recorded_at', oneMonthAgo.toISOString())
       .order('recorded_at', { ascending: true });
     if (data) setHistory(data);
     setLoading(false);
