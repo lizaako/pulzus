@@ -14,6 +14,33 @@ function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector
   );
 }
 
+// Offset overlapping conflicts so they fan out around the same location
+function offsetConflicts(conflicts: Conflict[]): (Conflict & { _offsetLat: number; _offsetLon: number })[] {
+  const groups: Record<string, Conflict[]> = {};
+  for (const c of conflicts) {
+    const key = `${c.latitude.toFixed(1)}_${c.longitude.toFixed(1)}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  }
+  const result: (Conflict & { _offsetLat: number; _offsetLon: number })[] = [];
+  for (const group of Object.values(groups)) {
+    if (group.length === 1) {
+      result.push({ ...group[0], _offsetLat: group[0].latitude, _offsetLon: group[0].longitude });
+    } else {
+      group.forEach((c, i) => {
+        const angle = (i / group.length) * Math.PI * 2;
+        const spread = 1.5; // degrees
+        result.push({
+          ...c,
+          _offsetLat: c.latitude + Math.cos(angle) * spread,
+          _offsetLon: c.longitude + Math.sin(angle) * spread,
+        });
+      });
+    }
+  }
+  return result;
+}
+
 function severityColor(severity: string): string {
   switch (severity?.toLowerCase()) {
     case 'high': return '#ff3333';
@@ -47,32 +74,25 @@ interface ConflictMarkerProps {
 }
 
 function ConflictMarker({ conflict, onSelect }: ConflictMarkerProps) {
-  const pos = useMemo(
-    () => latLonToVector3(conflict.latitude, conflict.longitude, 2.05),
-    [conflict.latitude, conflict.longitude]
-  );
+  const lat = (conflict as any)._offsetLat ?? conflict.latitude;
+  const lon = (conflict as any)._offsetLon ?? conflict.longitude;
+  const pos = useMemo(() => latLonToVector3(lat, lon, 2.03), [lat, lon]);
   const color = severityColor(conflict.severity);
   const [hovered, setHovered] = useState(false);
   const ref = useRef<THREE.Mesh>(null);
   const { gl } = useThree();
 
-  useFrame((_, delta) => {
-    if (ref.current) {
-      const scale = 1 + Math.sin(Date.now() * 0.003) * 0.3;
-      ref.current.scale.setScalar(hovered ? 1.8 : scale);
-    }
-  });
-
   return (
     <mesh
       ref={ref}
       position={pos}
+      scale={hovered ? 1.5 : 1}
       onClick={(e) => { e.stopPropagation(); onSelect(conflict); }}
       onPointerOver={() => { setHovered(true); gl.domElement.style.cursor = 'pointer'; }}
       onPointerOut={() => { setHovered(false); gl.domElement.style.cursor = 'auto'; }}
     >
-      <sphereGeometry args={[0.04, 16, 16]} />
-      <meshBasicMaterial color={color} transparent opacity={0.9} />
+      <sphereGeometry args={[0.02, 12, 12]} />
+      <meshBasicMaterial color={color} transparent opacity={0.95} />
     </mesh>
   );
 }
@@ -83,6 +103,7 @@ interface GlobeSceneProps {
 }
 
 function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
+  const spreadConflicts = useMemo(() => offsetConflicts(conflicts), [conflicts]);
   return (
     <>
       <ambientLight intensity={0.8} />
@@ -92,7 +113,7 @@ function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
       <group>
         <EarthMesh />
         <AtmosphereGlow />
-        {conflicts.map((c) => (
+        {spreadConflicts.map((c) => (
           <ConflictMarker key={c.event_id} conflict={c} onSelect={onSelectConflict} />
         ))}
       </group>
