@@ -54,7 +54,7 @@ export default function ChartPanel({ symbols }: ChartPanelProps) {
         </div>
       ) : chartData.length === 0 ? (
         <div className="h-48 flex items-center justify-center text-muted-foreground text-xs">
-          No data for {selected}
+          Nincs adat: {selected}
         </div>
       ) : (
         <ChartContainer config={chartConfig} className="h-48 w-full">
