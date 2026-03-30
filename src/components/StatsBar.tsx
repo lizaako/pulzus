@@ -34,7 +34,7 @@ export default function StatsBar({ articles, conflicts }: StatsBarProps) {
     },
     {
       icon: <Activity className="w-4 h-4" />,
-      label: 'AVG SENTIMENT',
+      label: 'ÁTL. HANGULAT',
       value: avgSentiment.toFixed(2),
       color: avgSentiment >= 0 ? 'text-success' : 'text-destructive',
     },
