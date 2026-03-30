@@ -1,0 +1,43 @@
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = 'https://vrquxovkptfigrjsmhng.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZycXV4b3ZrcHRmaWdyanNtaG5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NDgyNTksImV4cCI6MjA5MDQyNDI1OX0.3DPsPZXRb681lU_c-GZmxP0K6MISKkUE1liL-k4g1sM';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+export interface Article {
+  id: string;
+  title: string;
+  source: string;
+  url: string;
+  published_at: string;
+  sentiment_score: number;
+  topics: string;
+  affects_hungary: boolean;
+  hungary_impact: string;
+  warning_level: string;
+  summary: string;
+}
+
+export interface Conflict {
+  event_id: string;
+  event_type: string;
+  country: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  description: string;
+  severity: string;
+  source: string;
+  event_date: string;
+  fatalities: number;
+}
+
+export interface MarketData {
+  symbol: string;
+  company: string;
+  price: number;
+  change_percent: number;
+  currency: string;
+  recorded_at: string;
+}
