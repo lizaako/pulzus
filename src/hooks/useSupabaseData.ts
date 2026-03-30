@@ -120,22 +120,18 @@ const STATIC_CONFLICTS: Conflict[] = [
 ];
 
 export function useConflicts() {
+  const [conflicts, setConflicts] = useState<Conflict[]>(STATIC_CONFLICTS);
+  const [loading, setLoading] = useState(false);
+
+  return { conflicts, loading };
+}
+
+export function _useConflictsUnused() {
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    const { data } = await supabase
-      .from('conflicts')
-      .select('*')
-      .order('event_date', { ascending: false });
-    
-    // Filter DB conflicts to only keep the ones user wants
-    const filtered = (data || []).filter((c) => {
-      const text = `${c.event_type} ${c.description} ${c.country} ${c.location}`.toLowerCase();
-      return KEEP_KEYWORDS.some((kw) => text.includes(kw));
-    });
-
-    setConflicts([...filtered, ...STATIC_CONFLICTS]);
+    setConflicts(STATIC_CONFLICTS);
     setLoading(false);
   }, []);
 
