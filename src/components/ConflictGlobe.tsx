@@ -1,0 +1,153 @@
+import { useRef, useMemo, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Sphere } from '@react-three/drei';
+import * as THREE from 'three';
+import { Conflict } from '@/lib/supabase';
+
+function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+  return new THREE.Vector3(
+    -(radius * Math.sin(phi) * Math.cos(theta)),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+function severityColor(severity: string): string {
+  switch (severity?.toLowerCase()) {
+    case 'high': return '#ff3333';
+    case 'medium': return '#ff8800';
+    case 'low': return '#33cc33';
+    default: return '#00d4ff';
+  }
+}
+
+function EarthMesh() {
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (ref.current) {
+      ref.current.rotation.y += delta * 0.08;
+    }
+  });
+
+  return (
+    <Sphere ref={ref} args={[2, 64, 64]}>
+      <meshPhongMaterial
+        color="#1a6b3c"
+        emissive="#0a2f1a"
+        emissiveIntensity={0.3}
+        specular="#4488aa"
+        shininess={15}
+      />
+    </Sphere>
+  );
+}
+
+function OceanSphere() {
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (ref.current) {
+      ref.current.rotation.y += delta * 0.08;
+    }
+  });
+
+  return (
+    <Sphere ref={ref} args={[1.98, 64, 64]}>
+      <meshPhongMaterial color="#0055aa" emissive="#001133" emissiveIntensity={0.2} transparent opacity={0.9} />
+    </Sphere>
+  );
+}
+
+function AtmosphereGlow() {
+  return (
+    <Sphere args={[2.15, 64, 64]}>
+      <meshBasicMaterial color="#00aaff" transparent opacity={0.07} side={THREE.BackSide} />
+    </Sphere>
+  );
+}
+
+interface ConflictMarkerProps {
+  conflict: Conflict;
+  onSelect: (c: Conflict) => void;
+}
+
+function ConflictMarker({ conflict, onSelect }: ConflictMarkerProps) {
+  const pos = useMemo(
+    () => latLonToVector3(conflict.latitude, conflict.longitude, 2.05),
+    [conflict.latitude, conflict.longitude]
+  );
+  const color = severityColor(conflict.severity);
+  const [hovered, setHovered] = useState(false);
+  const ref = useRef<THREE.Mesh>(null);
+  const { gl } = useThree();
+
+  useFrame((_, delta) => {
+    if (ref.current) {
+      const scale = 1 + Math.sin(Date.now() * 0.003) * 0.3;
+      ref.current.scale.setScalar(hovered ? 1.8 : scale);
+    }
+  });
+
+  return (
+    <mesh
+      ref={ref}
+      position={pos}
+      onClick={(e) => { e.stopPropagation(); onSelect(conflict); }}
+      onPointerOver={() => { setHovered(true); gl.domElement.style.cursor = 'pointer'; }}
+      onPointerOut={() => { setHovered(false); gl.domElement.style.cursor = 'auto'; }}
+    >
+      <sphereGeometry args={[0.04, 16, 16]} />
+      <meshBasicMaterial color={color} transparent opacity={0.9} />
+    </mesh>
+  );
+}
+
+interface GlobeSceneProps {
+  conflicts: Conflict[];
+  onSelectConflict: (c: Conflict) => void;
+}
+
+function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
+  return (
+    <>
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[5, 3, 5]} intensity={1} color="#ffffff" />
+      <pointLight position={[-5, -3, -5]} intensity={0.3} color="#0088ff" />
+
+      <OceanSphere />
+      <EarthMesh />
+      <AtmosphereGlow />
+
+      {conflicts.map((c) => (
+        <ConflictMarker key={c.event_id} conflict={c} onSelect={onSelectConflict} />
+      ))}
+
+      <OrbitControls
+        enableZoom={true}
+        enablePan={false}
+        minDistance={3}
+        maxDistance={8}
+        autoRotate
+        autoRotateSpeed={0.3}
+      />
+    </>
+  );
+}
+
+interface ConflictGlobeProps {
+  conflicts: Conflict[];
+  onSelectConflict: (c: Conflict) => void;
+}
+
+export default function ConflictGlobe({ conflicts, onSelectConflict }: ConflictGlobeProps) {
+  return (
+    <div className="w-full h-full min-h-[400px]">
+      <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+        <GlobeScene conflicts={conflicts} onSelectConflict={onSelectConflict} />
+      </Canvas>
+    </div>
+  );
+}
