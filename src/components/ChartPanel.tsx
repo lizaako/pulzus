@@ -35,7 +35,7 @@ export default function ChartPanel({ symbols }: ChartPanelProps) {
   return (
     <div className="glass-panel p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📈 CHART</h2>
+        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📈 GRAFIKON</h2>
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
