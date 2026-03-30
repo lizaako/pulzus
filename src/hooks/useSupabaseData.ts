@@ -126,24 +126,6 @@ export function useConflicts() {
   return { conflicts, loading };
 }
 
-export function _useConflictsUnused() {
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetch = useCallback(async () => {
-    setConflicts(STATIC_CONFLICTS);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetch();
-    const interval = setInterval(fetch, 10000);
-    return () => clearInterval(interval);
-  }, [fetch]);
-
-  return { conflicts, loading };
-}
-
 export function useMarketData() {
   const [marketData, setMarketData] = useState<MarketData[]>([]);
   const [loading, setLoading] = useState(true);
