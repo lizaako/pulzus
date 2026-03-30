@@ -49,7 +49,7 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
   return (
     <div className="glass-panel h-full flex flex-col">
       <div className="p-4 border-b border-border/50">
-        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📰 NEWS FEED</h2>
+        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📰 HÍRFOLYAM</h2>
       </div>
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-3">
