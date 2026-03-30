@@ -31,10 +31,10 @@ export default function Index() {
       <header className="relative z-10 flex items-center justify-between px-6 py-4">
         <div>
           <h1 className="font-display text-xl font-black text-primary glow-text tracking-widest">
-            HUNGRYPULSE
+            PULZUS
           </h1>
           <p className="text-[10px] text-muted-foreground tracking-[0.3em] mt-0.5">
-            GLOBAL INTELLIGENCE DASHBOARD
+            GLOBÁLIS HÍRKÖZPONT
           </p>
         </div>
         <Navigation current={view} onChange={setView} />
