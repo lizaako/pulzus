@@ -50,7 +50,7 @@ export default function ChartPanel({ symbols }: ChartPanelProps) {
 
       {loading ? (
         <div className="h-48 flex items-center justify-center">
-          <div className="animate-pulse-glow text-primary font-display text-xs">LOADING...</div>
+          <div className="animate-pulse-glow text-primary font-display text-xs">BETÖLTÉS...</div>
         </div>
       ) : chartData.length === 0 ? (
         <div className="h-48 flex items-center justify-center text-muted-foreground text-xs">
