@@ -41,7 +41,7 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
   if (loading) {
     return (
       <div className="glass-panel p-6 h-full flex items-center justify-center">
-        <div className="animate-pulse-glow text-primary font-display text-sm">LOADING INTEL...</div>
+        <div className="animate-pulse-glow text-primary font-display text-sm">BETÖLTÉS...</div>
       </div>
     );
   }
