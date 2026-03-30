@@ -28,7 +28,7 @@ export default function StatsBar({ articles, conflicts }: StatsBarProps) {
     },
     {
       icon: <Newspaper className="w-4 h-4" />,
-      label: 'ARTICLES',
+      label: 'CIKKEK',
       value: articles.length,
       color: 'text-secondary',
     },
