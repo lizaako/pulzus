@@ -24,17 +24,10 @@ function severityColor(severity: string): string {
 }
 
 function EarthMesh() {
-  const ref = useRef<THREE.Mesh>(null);
   const texture = useLoader(THREE.TextureLoader, 'https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg');
 
-  useFrame((_, delta) => {
-    if (ref.current) {
-      ref.current.rotation.y += delta * 0.08;
-    }
-  });
-
   return (
-    <Sphere ref={ref} args={[2, 64, 64]}>
+    <Sphere args={[2, 64, 64]}>
       <meshStandardMaterial map={texture} />
     </Sphere>
   );
