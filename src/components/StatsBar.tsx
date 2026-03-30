@@ -16,7 +16,7 @@ export default function StatsBar({ articles, conflicts }: StatsBarProps) {
   const stats = [
     {
       icon: <Globe2 className="w-4 h-4" />,
-      label: 'CONFLICTS',
+      label: 'KONFLIKTUSOK',
       value: conflicts.length,
       color: 'text-primary',
     },
