@@ -117,6 +117,19 @@ const STATIC_CONFLICTS: Conflict[] = [
     event_date: '2026-03-28',
     fatalities: 9,
   },
+  {
+    event_id: 'static-iran-usa-1',
+    event_type: 'Katonai feszültség',
+    country: 'Irán',
+    location: 'Hormuzi-szoros',
+    latitude: 27.0,
+    longitude: 56.3,
+    description: 'Fokozódó amerikai-iráni katonai feszültség a Hormuzi-szorosban. Az USA hadihajókat és vadászgépeket telepített a térségbe, Irán válaszul hadgyakorlatot indított.',
+    severity: 'high',
+    source: 'Reuters',
+    event_date: '2026-03-30',
+    fatalities: 0,
+  },
 ];
 
 export function useConflicts() {
