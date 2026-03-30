@@ -85,25 +85,25 @@ interface GlobeSceneProps {
 function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
   return (
     <>
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[5, 3, 5]} intensity={1} color="#ffffff" />
-      <pointLight position={[-5, -3, -5]} intensity={0.3} color="#0088ff" />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 3, 5]} intensity={1.2} color="#ffffff" />
+      <pointLight position={[-5, -3, -5]} intensity={0.5} color="#aaccff" />
 
-      {/* Earth with texture */}
-      <EarthMesh />
-      <AtmosphereGlow />
-
-      {conflicts.map((c) => (
-        <ConflictMarker key={c.event_id} conflict={c} onSelect={onSelectConflict} />
-      ))}
+      <group>
+        <EarthMesh />
+        <AtmosphereGlow />
+        {conflicts.map((c) => (
+          <ConflictMarker key={c.event_id} conflict={c} onSelect={onSelectConflict} />
+        ))}
+      </group>
 
       <OrbitControls
         enableZoom={true}
         enablePan={false}
+        enableRotate={true}
         minDistance={3}
         maxDistance={8}
-        autoRotate
-        autoRotateSpeed={0.3}
+        autoRotate={false}
       />
     </>
   );
