@@ -14,6 +14,33 @@ function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector
   );
 }
 
+// Offset overlapping conflicts so they fan out around the same location
+function offsetConflicts(conflicts: Conflict[]): (Conflict & { _offsetLat: number; _offsetLon: number })[] {
+  const groups: Record<string, Conflict[]> = {};
+  for (const c of conflicts) {
+    const key = `${c.latitude.toFixed(1)}_${c.longitude.toFixed(1)}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  }
+  const result: (Conflict & { _offsetLat: number; _offsetLon: number })[] = [];
+  for (const group of Object.values(groups)) {
+    if (group.length === 1) {
+      result.push({ ...group[0], _offsetLat: group[0].latitude, _offsetLon: group[0].longitude });
+    } else {
+      group.forEach((c, i) => {
+        const angle = (i / group.length) * Math.PI * 2;
+        const spread = 1.5; // degrees
+        result.push({
+          ...c,
+          _offsetLat: c.latitude + Math.cos(angle) * spread,
+          _offsetLon: c.longitude + Math.sin(angle) * spread,
+        });
+      });
+    }
+  }
+  return result;
+}
+
 function severityColor(severity: string): string {
   switch (severity?.toLowerCase()) {
     case 'high': return '#ff3333';
