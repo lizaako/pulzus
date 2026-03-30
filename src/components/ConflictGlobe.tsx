@@ -103,6 +103,7 @@ interface GlobeSceneProps {
 }
 
 function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
+  const spreadConflicts = useMemo(() => offsetConflicts(conflicts), [conflicts]);
   return (
     <>
       <ambientLight intensity={0.8} />
@@ -112,7 +113,7 @@ function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
       <group>
         <EarthMesh />
         <AtmosphereGlow />
-        {conflicts.map((c) => (
+        {spreadConflicts.map((c) => (
           <ConflictMarker key={c.event_id} conflict={c} onSelect={onSelectConflict} />
         ))}
       </group>
