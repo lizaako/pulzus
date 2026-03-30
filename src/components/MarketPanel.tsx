@@ -19,7 +19,7 @@ export default function MarketPanel({ marketData, loading }: MarketPanelProps) {
   if (loading) {
     return (
       <div className="glass-panel p-6 flex items-center justify-center">
-        <div className="animate-pulse-glow text-primary font-display text-sm">LOADING MARKETS...</div>
+        <div className="animate-pulse-glow text-primary font-display text-sm">PIACOK BETÖLTÉSE...</div>
       </div>
     );
   }
