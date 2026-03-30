@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useMarketHistory } from '@/hooks/useSupabaseData';
-import { MarketData } from '@/lib/supabase';
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ChartPanelProps {
   symbols: string[];
@@ -20,60 +20,87 @@ const chartConfig: ChartConfig = {
   },
 };
 
-export default function ChartPanel({ symbols }: ChartPanelProps) {
-  const [selected, setSelected] = useState(symbols[0] || '');
-  const { history, loading } = useMarketHistory(selected);
+function SymbolChart({ symbol }: { symbol: string }) {
+  const { history, loading } = useMarketHistory(symbol);
 
-  const chartData = useMemo(() =>
-    history.map((d) => ({
-      date: new Date(d.recorded_at).toLocaleDateString(),
-      price: d.price,
-    })),
+  const chartData = useMemo(
+    () =>
+      history.map((d) => ({
+        date: new Date(d.recorded_at).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' }),
+        price: d.price,
+      })),
     [history]
   );
 
+  const latestPrice = history.length ? history[history.length - 1].price : null;
+  const firstPrice = history.length ? history[0].price : null;
+  const changePct =
+    latestPrice && firstPrice ? (((latestPrice - firstPrice) / firstPrice) * 100).toFixed(2) : null;
+  const isPositive = changePct ? parseFloat(changePct) >= 0 : true;
+
   return (
-    <div className="glass-panel p-4 space-y-3">
+    <div className="p-3 rounded-lg bg-muted/20 border border-border/20 space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📈 GRAFIKON</h2>
-        <select
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="bg-muted/50 border border-border/50 text-foreground text-xs rounded px-2 py-1 focus:outline-none focus:border-primary"
-        >
-          {symbols.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+        <span className="text-xs font-bold text-foreground">{symbol}</span>
+        <div className="flex items-center gap-2">
+          {latestPrice != null && (
+            <span className="text-xs font-mono text-foreground">
+              {latestPrice.toLocaleString('hu-HU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          )}
+          {changePct && (
+            <span className={`text-[10px] font-mono ${isPositive ? 'text-success' : 'text-destructive'}`}>
+              {isPositive ? '+' : ''}{changePct}%
+            </span>
+          )}
+        </div>
       </div>
-      <div className="neon-line" />
 
       {loading ? (
-        <div className="h-48 flex items-center justify-center">
-          <div className="animate-pulse-glow text-primary font-display text-xs">BETÖLTÉS...</div>
+        <div className="h-28 flex items-center justify-center">
+          <div className="animate-pulse-glow text-primary font-display text-[10px]">BETÖLTÉS...</div>
         </div>
       ) : chartData.length === 0 ? (
-        <div className="h-48 flex items-center justify-center text-muted-foreground text-xs">
-          Nincs adat: {selected}
+        <div className="h-28 flex items-center justify-center text-muted-foreground text-[10px]">
+          Nincs adat
         </div>
       ) : (
-        <ChartContainer config={chartConfig} className="h-48 w-full">
+        <ChartContainer config={chartConfig} className="h-28 w-full">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(225 20% 18%)" />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(215 15% 55%)' }} />
-            <YAxis tick={{ fontSize: 10, fill: 'hsl(215 15% 55%)' }} domain={['auto', 'auto']} />
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'hsl(215 15% 55%)' }} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 9, fill: 'hsl(215 15% 55%)' }} domain={['auto', 'auto']} width={45} />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Line
               type="monotone"
               dataKey="price"
-              stroke="hsl(195 100% 50%)"
-              strokeWidth={2}
+              stroke={isPositive ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
+              strokeWidth={1.5}
               dot={false}
-              activeDot={{ r: 4, fill: 'hsl(195 100% 50%)' }}
+              activeDot={{ r: 3 }}
             />
           </LineChart>
         </ChartContainer>
       )}
+
+      <div className="text-[9px] text-muted-foreground text-right tracking-wider">1 HÓNAPOS NÉZET</div>
+    </div>
+  );
+}
+
+export default function ChartPanel({ symbols }: ChartPanelProps) {
+  return (
+    <div className="glass-panel flex flex-col h-full">
+      <div className="p-4 border-b border-border/50">
+        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📈 GRAFIKONOK</h2>
+      </div>
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-3">
+          {symbols.map((s) => (
+            <SymbolChart key={s} symbol={s} />
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
