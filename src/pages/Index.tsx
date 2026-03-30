@@ -39,7 +39,7 @@ export default function Index() {
         </div>
         <Navigation current={view} onChange={setView} />
         <div className="text-[10px] text-muted-foreground font-mono">
-          {new Date().toLocaleString()} • LIVE
+          {new Date().toLocaleString('hu-HU')} • ÉLŐ
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-success ml-1.5 animate-pulse-glow" />
         </div>
       </header>

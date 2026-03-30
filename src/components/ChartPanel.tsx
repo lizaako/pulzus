@@ -15,7 +15,7 @@ interface ChartPanelProps {
 
 const chartConfig: ChartConfig = {
   price: {
-    label: 'Price',
+    label: 'Ár',
     color: 'hsl(195 100% 50%)',
   },
 };

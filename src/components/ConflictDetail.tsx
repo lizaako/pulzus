@@ -52,7 +52,7 @@ export default function ConflictDetail({ conflict, onClose }: ConflictDetailProp
       <p className="text-sm text-muted-foreground leading-relaxed">{conflict.description}</p>
 
       <div className="text-xs text-muted-foreground/60">
-        Source: {conflict.source}
+        Forrás: {conflict.source}
       </div>
     </div>
   );

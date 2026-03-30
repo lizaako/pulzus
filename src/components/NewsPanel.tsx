@@ -88,7 +88,7 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
 
               {article.affects_hungary && article.hungary_impact && (
                 <div className="mt-1 p-2 rounded bg-destructive/5 border border-destructive/10">
-                  <p className="text-[10px] text-destructive font-semibold mb-0.5">🇭🇺 Impact on Hungary</p>
+                  <p className="text-[10px] text-destructive font-semibold mb-0.5">🇭🇺 Hatás Magyarországra</p>
                   <p className="text-[10px] text-muted-foreground">{article.hungary_impact}</p>
                 </div>
               )}

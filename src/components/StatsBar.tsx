@@ -40,7 +40,7 @@ export default function StatsBar({ articles, conflicts }: StatsBarProps) {
     },
     {
       icon: <span className="text-sm">🇭🇺</span>,
-      label: 'HU IMPACT',
+      label: 'HU HATÁS',
       value: hungaryArticles,
       color: 'text-destructive',
     },

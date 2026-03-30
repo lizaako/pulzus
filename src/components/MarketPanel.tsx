@@ -26,7 +26,7 @@ export default function MarketPanel({ marketData, loading }: MarketPanelProps) {
 
   return (
     <div className="glass-panel p-4 space-y-3">
-      <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">💰 MARKETS</h2>
+      <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">💰 PIACOK</h2>
       <div className="neon-line" />
       <div className="space-y-2">
         {entries.map((d) => {
