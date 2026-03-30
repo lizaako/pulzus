@@ -1,5 +1,5 @@
 import { useRef, useMemo, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 import { Conflict } from '@/lib/supabase';
@@ -25,6 +25,7 @@ function severityColor(severity: string): string {
 
 function EarthMesh() {
   const ref = useRef<THREE.Mesh>(null);
+  const texture = useLoader(THREE.TextureLoader, 'https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg');
 
   useFrame((_, delta) => {
     if (ref.current) {
@@ -34,37 +35,15 @@ function EarthMesh() {
 
   return (
     <Sphere ref={ref} args={[2, 64, 64]}>
-      <meshPhongMaterial
-        color="#1a6b3c"
-        emissive="#0a2f1a"
-        emissiveIntensity={0.3}
-        specular="#4488aa"
-        shininess={15}
-      />
-    </Sphere>
-  );
-}
-
-function OceanSphere() {
-  const ref = useRef<THREE.Mesh>(null);
-
-  useFrame((_, delta) => {
-    if (ref.current) {
-      ref.current.rotation.y += delta * 0.08;
-    }
-  });
-
-  return (
-    <Sphere ref={ref} args={[1.98, 64, 64]}>
-      <meshPhongMaterial color="#0055aa" emissive="#001133" emissiveIntensity={0.2} transparent opacity={0.9} />
+      <meshStandardMaterial map={texture} />
     </Sphere>
   );
 }
 
 function AtmosphereGlow() {
   return (
-    <Sphere args={[2.15, 64, 64]}>
-      <meshBasicMaterial color="#00aaff" transparent opacity={0.07} side={THREE.BackSide} />
+    <Sphere args={[2.08, 64, 64]}>
+      <meshBasicMaterial color="#4499ff" transparent opacity={0.08} side={THREE.BackSide} />
     </Sphere>
   );
 }
