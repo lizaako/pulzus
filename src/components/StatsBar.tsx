@@ -22,7 +22,7 @@ export default function StatsBar({ articles, conflicts }: StatsBarProps) {
     },
     {
       icon: <AlertTriangle className="w-4 h-4" />,
-      label: 'HIGH SEVERITY',
+      label: 'MAGAS SZINTŰ',
       value: highConflicts,
       color: 'text-destructive',
     },
