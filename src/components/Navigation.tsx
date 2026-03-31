@@ -1,6 +1,6 @@
-import { Globe2, Newspaper, TrendingUp } from 'lucide-react';
+import { Globe2, TrendingUp } from 'lucide-react';
 
-export type View = 'globe' | 'news' | 'markets';
+export type View = 'globe' | 'markets';
 
 interface NavigationProps {
   current: View;
@@ -8,8 +8,7 @@ interface NavigationProps {
 }
 
 const items: { id: View; label: string; icon: React.ReactNode }[] = [
-  { id: 'globe', label: 'TÉRKÉP', icon: <Globe2 className="w-4 h-4" /> },
-  { id: 'news', label: 'HÍREK', icon: <Newspaper className="w-4 h-4" /> },
+  { id: 'globe', label: 'ÁTTEKINTÉS', icon: <Globe2 className="w-4 h-4" /> },
   { id: 'markets', label: 'PIACOK', icon: <TrendingUp className="w-4 h-4" /> },
 ];
 

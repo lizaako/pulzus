@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useArticles, useConflicts, useMarketData } from '@/hooks/useSupabaseData';
-import { Conflict } from '@/lib/supabase';
+import { Article, Conflict } from '@/lib/supabase';
 import ParticleBackground from '@/components/ParticleBackground';
 import ConflictGlobe from '@/components/ConflictGlobe';
 import ConflictDetail from '@/components/ConflictDetail';
 import NewsPanel from '@/components/NewsPanel';
+import NewsInsightChat from '@/components/NewsInsightChat';
 import MarketPanel from '@/components/MarketPanel';
 import ChartPanel from '@/components/ChartPanel';
 import StatsBar from '@/components/StatsBar';
@@ -12,11 +13,12 @@ import Navigation, { View } from '@/components/Navigation';
 
 export default function Index() {
   const { articles, loading: articlesLoading } = useArticles();
-  const { conflicts, loading: conflictsLoading } = useConflicts();
+  const { conflicts } = useConflicts();
   const { marketData, loading: marketLoading } = useMarketData();
 
   const [view, setView] = useState<View>('globe');
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
+  const [chatArticle, setChatArticle] = useState<Article | null>(null);
 
   const symbols = useMemo(() => {
     const unique = [...new Set(marketData.map((d) => d.symbol))];
@@ -52,37 +54,31 @@ export default function Index() {
       {/* Main Content */}
       <main className="relative z-10 px-6 pb-6">
         {view === 'globe' && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-200px)]">
-            {/* Globe */}
-            <div className="lg:col-span-3 glass-panel overflow-hidden relative">
-              <ConflictGlobe
-                conflicts={conflicts}
-                onSelectConflict={setSelectedConflict}
-              />
-              {/* Conflict detail overlay */}
-              {selectedConflict && (
-                <div className="absolute top-4 right-4 w-80 z-20">
-                  <ConflictDetail
-                    conflict={selectedConflict}
-                    onClose={() => setSelectedConflict(null)}
-                  />
-                </div>
-              )}
-            </div>
+          <div className="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)_320px] gap-4 h-[calc(100vh-200px)]">
+            <section className="min-h-0 h-full order-2 xl:order-1">
+              <NewsPanel articles={articles} loading={articlesLoading} onOpenChat={setChatArticle} />
+            </section>
 
-            {/* Side panels */}
-            <div className="flex flex-col gap-4 overflow-hidden">
-              <div className="flex-1 min-h-0">
-                <NewsPanel articles={articles.slice(0, 10)} loading={articlesLoading} />
+            <section className="min-h-0 h-full order-1 xl:order-2">
+              <div className="glass-panel overflow-hidden relative h-full min-h-[420px]">
+                <ConflictGlobe
+                  conflicts={conflicts}
+                  onSelectConflict={setSelectedConflict}
+                />
+                {selectedConflict && (
+                  <div className="absolute top-4 right-4 w-80 max-w-[calc(100%-2rem)] z-20">
+                    <ConflictDetail
+                      conflict={selectedConflict}
+                      onClose={() => setSelectedConflict(null)}
+                    />
+                  </div>
+                )}
               </div>
-              <MarketPanel marketData={marketData} loading={marketLoading} />
-            </div>
-          </div>
-        )}
+            </section>
 
-        {view === 'news' && (
-          <div className="h-[calc(100vh-200px)]">
-            <NewsPanel articles={articles} loading={articlesLoading} />
+            <section className="min-h-0 h-full order-3">
+              <MarketPanel marketData={marketData} loading={marketLoading} />
+            </section>
           </div>
         )}
 
@@ -93,6 +89,14 @@ export default function Index() {
           </div>
         )}
       </main>
+
+      <NewsInsightChat
+        article={chatArticle}
+        open={Boolean(chatArticle)}
+        onOpenChange={(open) => {
+          if (!open) setChatArticle(null);
+        }}
+      />
     </div>
   );
 }

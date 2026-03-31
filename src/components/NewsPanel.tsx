@@ -1,11 +1,16 @@
+import { useEffect, useState } from 'react';
 import { Article } from '@/lib/supabase';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Flag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { localizeHungaryImpact } from '@/lib/article-localization';
+import { translateHungaryImpactText } from '@/lib/news-chat';
+import { ExternalLink, Flag, MessageSquareText } from 'lucide-react';
 
 interface NewsPanelProps {
   articles: Article[];
   loading: boolean;
+  onOpenChat?: (article: Article) => void;
 }
 
 function sentimentColor(score: number): string {
@@ -37,7 +42,39 @@ function warningBadge(level: string) {
   );
 }
 
-export default function NewsPanel({ articles, loading }: NewsPanelProps) {
+export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelProps) {
+  const [translatedImpacts, setTranslatedImpacts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const candidates = articles.filter((article) => article.affects_hungary && article.hungary_impact);
+    const missing = candidates.filter((article) => !translatedImpacts[article.id]);
+
+    if (missing.length === 0) return;
+
+    void Promise.all(
+      missing.map(async (article) => {
+        const translation = await translateHungaryImpactText(article.hungary_impact);
+        return { id: article.id, translation };
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+
+      setTranslatedImpacts((current) => {
+        const next = { ...current };
+        for (const result of results) {
+          next[result.id] = result.translation;
+        }
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [articles, translatedImpacts]);
+
   if (loading) {
     return (
       <div className="glass-panel p-6 h-full flex items-center justify-center">
@@ -72,7 +109,7 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
                 {warningBadge(article.warning_level)}
                 {article.affects_hungary && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 flex items-center gap-1">
-                    <Flag className="w-2.5 h-2.5" /> 🇭🇺 HU
+                    <Flag className="w-2.5 h-2.5" /> 🇭🇺 MAGYAR HATÁS
                   </span>
                 )}
               </div>
@@ -86,10 +123,31 @@ export default function NewsPanel({ articles, loading }: NewsPanelProps) {
                 <div className="flex-1">{sentimentBar(article.sentiment_score)}</div>
               </div>
 
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <Badge variant="outline" className="border-primary/20 bg-primary/5 text-[10px] text-primary">
+                  Mélyelemzés elérhető
+                </Badge>
+
+                {onOpenChat && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-primary/20 bg-primary/5 px-2 text-[10px] font-semibold uppercase tracking-wider text-primary hover:bg-primary/10"
+                    onClick={() => onOpenChat(article)}
+                  >
+                    <MessageSquareText className="mr-1 h-3.5 w-3.5" />
+                    Kérdezd az AI-t
+                  </Button>
+                )}
+              </div>
+
               {article.affects_hungary && article.hungary_impact && (
                 <div className="mt-1 p-2 rounded bg-destructive/5 border border-destructive/10">
                   <p className="text-[10px] text-destructive font-semibold mb-0.5">🇭🇺 Hatás Magyarországra</p>
-                  <p className="text-[10px] text-muted-foreground">{article.hungary_impact}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {translatedImpacts[article.id] || localizeHungaryImpact(article.hungary_impact)}
+                  </p>
                 </div>
               )}
             </div>
