@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PULZUS - Intelligens Hírelemzési Platform</title>
+    
+    <!-- Reveal.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Space+Grotesk:wght@400;600;700&display=swap');
+        
+        :root {
+            --color-bg: #0a0a0a;
+            --color-bg-secondary: #1a1a1a;
+            --color-text: #f5f5f0;
+            --color-text-dim: #a0a0a0;
+            --color-accent: #c41e3a;
+            --color-accent-glow: rgba(196, 30, 58, 0.3);
+            --color-star-soft: rgba(255, 255, 255, 0.08);
+            --color-star-mid: rgba(196, 30, 58, 0.16);
+            --color-star-bright: rgba(245, 245, 240, 0.32);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+        
+        .reveal {
+            font-family: 'Inter', sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .reveal h1, .reveal h2, .reveal h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            text-transform: none;
+            color: var(--color-text);
+        }
+        
+        .reveal h1 {
+            font-size: 3.2rem;
+            margin-bottom: 0.3em;
+            text-shadow: 0 0 30px var(--color-accent-glow);
+        }
+        
+        .reveal h2 {
+            font-size: 2.2rem;
+            margin-bottom: 0.5em;
+        }
+        
+        .reveal h3 {
+            font-size: 1.35rem;
+            color: var(--color-accent);
+            margin-bottom: 0.5em;
+        }
+        
+        .reveal p, .reveal li {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: var(--color-text-dim);
+        }
+        
+        .reveal strong {
+            color: var(--color-accent);
+            font-weight: 600;
+        }
+        
+        .reveal .slides section {
+            text-align: left;
+            padding: 1.1rem clamp(24rem, 34vw, 32rem) 1.1rem 1.4rem;
+            overflow-wrap: normal;
+            word-break: normal;
+            hyphens: none;
+            min-height: calc(100vh - 90px);
+            max-height: calc(100vh - 90px);
+            overflow-y: hidden;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .reveal .slides section > * {
+            max-width: min(760px, 100%);
+        }
+        
+        /* Globe container - always visible */
+        #globe-container {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.46;
+            transition: width 0.9s ease, opacity 0.9s ease, transform 0.9s ease;
+        }
+
+        body.hero-view #globe-container {
+            width: 100%;
+            opacity: 0.78;
+            transform: scale(1.03);
+        }
+
+        body.outro-view #globe-container {
+            width: 100%;
+            opacity: 0.82;
+            transform: scale(1.04);
+        }
+
+        body.hero-view .reveal .slides section {
+            padding-right: 1.6rem;
+        }
+
+        body.outro-view .reveal .slides section {
+            padding-right: 1.6rem;
+        }
+        
+        .reveal .slides {
+            z-index: 10;
+            position: relative;
+        }
+        
+        /* Star background */
+        .reveal::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 12% 18%, var(--color-star-bright) 0 1px, transparent 1.8px),
+                radial-gradient(circle at 26% 72%, var(--color-star-soft) 0 1px, transparent 1.8px),
+                radial-gradient(circle at 36% 28%, var(--color-star-mid) 0 1.2px, transparent 2px),
+                radial-gradient(circle at 48% 56%, var(--color-star-soft) 0 1px, transparent 1.8px),
+                radial-gradient(circle at 62% 20%, var(--color-star-bright) 0 1.1px, transparent 2px),
+                radial-gradient(circle at 76% 38%, var(--color-star-mid) 0 1.3px, transparent 2.1px),
+                radial-gradient(circle at 84% 68%, var(--color-star-soft) 0 1px, transparent 1.8px),
+                radial-gradient(circle at 92% 14%, var(--color-star-bright) 0 1.1px, transparent 2px),
+                radial-gradient(circle at 18% 88%, var(--color-star-mid) 0 1.2px, transparent 2px),
+                radial-gradient(circle at 68% 84%, var(--color-star-soft) 0 1px, transparent 1.8px);
+            background-size: 420px 420px, 520px 520px, 640px 640px, 560px 560px, 700px 700px, 620px 620px, 480px 480px, 760px 760px, 580px 580px, 530px 530px;
+            background-repeat: repeat;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.75;
+        }
+
+        .reveal::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(196, 30, 58, 0.08), transparent 32%),
+                radial-gradient(circle at 75% 22%, rgba(196, 30, 58, 0.05), transparent 28%),
+                radial-gradient(circle at 62% 76%, rgba(255, 255, 255, 0.03), transparent 24%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* Accent line */
+        .accent-line {
+            height: 4px;
+            width: 80px;
+            background: linear-gradient(90deg, var(--color-accent), transparent);
+            margin: 1em 0;
+            box-shadow: 0 0 20px var(--color-accent-glow);
+        }
+        
+        /* Hero slide */
+        .hero-slide {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: calc(100vh - 90px) !important;
+            text-align: left;
+        }
+        
+        .hero-logo {
+            font-size: 4.4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--color-accent) 0%, #ff4458 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.2em;
+            text-shadow: none;
+            letter-spacing: 0.02em;
+        }
+        
+        .hero-tagline {
+            font-size: 1.45rem;
+            color: var(--color-text-dim);
+            font-weight: 300;
+            margin-bottom: 1.1em;
+        }
+
+        .hero-authors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            margin-top: 1.4rem;
+        }
+
+        .hero-authors span {
+            background: rgba(10, 10, 10, 0.78);
+            border: 1px solid rgba(196, 30, 58, 0.28);
+            padding: 0.55rem 0.85rem;
+            border-radius: 999px;
+            color: var(--color-text);
+            font-size: 0.92rem;
+        }
+
+        .slide-kicker {
+            color: var(--color-accent);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            margin-bottom: 0.8rem;
+        }
+
+        .lede {
+            max-width: 720px;
+            font-size: 1.03rem;
+            color: var(--color-text);
+            margin-bottom: 1rem;
+        }
+
+        .bullet-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .bullet-card {
+            background: rgba(26, 26, 26, 0.9);
+            border: 1px solid rgba(196, 30, 58, 0.16);
+            border-radius: 10px;
+            padding: 1rem 1.1rem;
+        }
+
+        .bullet-card h4 {
+            margin: 0 0 0.45rem 0;
+            font-size: 0.98rem;
+            color: var(--color-text);
+            font-weight: 700;
+        }
+
+        .bullet-card p {
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .comparison-card {
+            background: rgba(26, 26, 26, 0.92);
+            border: 1px solid rgba(196, 30, 58, 0.18);
+            border-radius: 10px;
+            padding: 0.95rem;
+            min-height: 0;
+        }
+
+        .comparison-card h4 {
+            margin: 0 0 0.4rem 0;
+            color: var(--color-accent);
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .comparison-card p {
+            margin: 0;
+            font-size: 0.86rem;
+            line-height: 1.42;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            gap: 1.2rem;
+            align-items: start;
+            margin-top: 1rem;
+        }
+
+        .compact-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        .mini-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .mini-metric {
+            background: rgba(26, 26, 26, 0.9);
+            border: 1px solid rgba(196, 30, 58, 0.16);
+            border-radius: 10px;
+            padding: 0.95rem;
+        }
+
+        .mini-metric .value {
+            color: var(--color-accent);
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.35rem;
+        }
+
+        .mini-metric .label {
+            color: var(--color-text);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .mini-metric .meta {
+            color: var(--color-text-dim);
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+
+        .section-footnote {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--color-text);
+        }
+        
+        /* Feature cards */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+        
+        .feature-card {
+            background: var(--color-bg-secondary);
+            border: 1px solid rgba(196, 30, 58, 0.2);
+            border-radius: 8px;
+            padding: 1rem 1.05rem;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 30px var(--color-accent-glow);
+            transform: translateY(-4px);
+        }
+        
+        .feature-card h3 {
+            font-size: 1rem;
+            margin-bottom: 0.35rem;
+        }
+        
+        .feature-card p {
+            font-size: 0.88rem;
+            margin: 0;
+            line-height: 1.4;
+        }
+        
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--color-accent);
+            line-height: 1;
+            margin-bottom: 0.2em;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: var(--color-text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            word-break: keep-all;
+            overflow-wrap: normal;
+            hyphens: none;
+        }
+        
+        /* Tech stack */
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            margin-top: 2em;
+        }
+        
+        .tech-badge {
+            background: var(--color-bg-secondary);
+            border: 1px solid rgba(196, 30, 58, 0.3);
+            padding: 0.6em 1.2em;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .arch-slide .arch-diagram {
+            margin: 0.65rem 0;
+            padding: 0.95rem;
+        }
+
+        .arch-slide .arch-flow {
+            gap: 0.65rem;
+        }
+
+        .arch-slide .arch-box {
+            min-width: 118px;
+            padding: 0.72rem 0.85rem;
+        }
+
+        .arch-slide .arch-box h4 {
+            font-size: 0.9rem;
+        }
+
+        .arch-slide .arch-box p {
+            font-size: 0.68rem;
+        }
+
+        .arch-slide .arch-arrow {
+            font-size: 1.45rem;
+        }
+
+        .arch-slide .highlight-box {
+            margin: 0.65rem 0;
+        }
+
+        .arch-slide .tech-stack {
+            gap: 0.55rem;
+            margin-top: 0.7rem;
+        }
+
+        .arch-slide .tech-badge {
+            font-size: 0.78rem;
+            padding: 0.42rem 0.78rem;
+        }
+        
+        /* Architecture diagram */
+        .arch-diagram {
+            margin: 1rem 0;
+            padding: 1.1rem;
+            background: var(--color-bg-secondary);
+            border-radius: 12px;
+            border: 1px solid rgba(196, 30, 58, 0.2);
+        }
+        
+        .arch-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1em;
+        }
+        
+        .arch-box {
+            background: var(--color-bg);
+            border: 2px solid var(--color-accent);
+            border-radius: 8px;
+            padding: 0.9rem 1rem;
+            text-align: center;
+            min-width: 140px;
+            max-width: 100%;
+            box-shadow: 0 0 20px var(--color-accent-glow);
+        }
+        
+        .arch-box h4 {
+            font-size: 1em;
+            margin: 0;
+            color: var(--color-accent);
+            font-weight: 700;
+        }
+        
+        .arch-box p {
+            font-size: 0.75em;
+            margin: 0.3em 0 0 0;
+            color: var(--color-text-dim);
+        }
+        
+        .arch-arrow {
+            font-size: 2em;
+            color: var(--color-accent);
+            opacity: 0.5;
+        }
+        
+        /* List styling */
+        .reveal ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0.8em 0 0 0;
+        }
+        
+        .reveal li {
+            padding-left: 1.5em;
+            margin-bottom: 0.8em;
+            position: relative;
+        }
+        
+        .reveal li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--color-accent);
+            font-weight: bold;
+        }
+        
+        /* Progress bar */
+        .reveal .progress {
+            background: rgba(196, 30, 58, 0.2);
+            height: 4px;
+        }
+        
+        .reveal .progress span {
+            background: var(--color-accent);
+            box-shadow: 0 0 10px var(--color-accent-glow);
+        }
+        
+        /* Controls */
+        .reveal .controls {
+            color: var(--color-accent);
+        }
+        
+        /* Slide number */
+        .reveal .slide-number {
+            background: var(--color-bg-secondary);
+            color: var(--color-accent);
+            border: 1px solid rgba(196, 30, 58, 0.3);
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        
+        /* Closing slide */
+        .closing-slide {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center !important;
+            min-height: calc(100vh - 90px) !important;
+        }
+        
+        .closing-slide h2 {
+            font-size: 2.8rem;
+            margin-bottom: 0.5em;
+        }
+        
+        .closing-slide .tagline {
+            font-size: 1.35rem;
+            color: var(--color-text-dim);
+            margin-bottom: 0;
+            max-width: 540px;
+        }
+
+        .closing-brand {
+            font-size: 3.8rem;
+            font-weight: 900;
+            color: var(--color-accent);
+            letter-spacing: 0.04em;
+            margin-top: 0.4rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 28px rgba(196, 30, 58, 0.28);
+        }
+
+        .closing-subtle {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: rgba(245, 245, 240, 0.62);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        #twinkle-star {
+            position: fixed;
+            top: 21%;
+            right: 18%;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,232,186,0.95) 40%, rgba(255,255,255,0) 72%);
+            box-shadow: 0 0 14px rgba(255, 240, 210, 0.75);
+            transform: scale(0.65);
+        }
+
+        #twinkle-star::before,
+        #twinkle-star::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,244,220,0.95), rgba(255,255,255,0));
+            transform: translate(-50%, -50%);
+        }
+
+        #twinkle-star::before {
+            width: 42px;
+            height: 2px;
+        }
+
+        #twinkle-star::after {
+            width: 2px;
+            height: 42px;
+            background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,244,220,0.95), rgba(255,255,255,0));
+        }
+
+        body.outro-view #twinkle-star {
+            opacity: 1;
+            animation: twinkle-star 2.8s ease-in-out infinite;
+        }
+        
+        /* Highlight box */
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(196, 30, 58, 0.1), rgba(196, 30, 58, 0.05));
+            border-left: 4px solid var(--color-accent);
+            padding: 0.95rem 1rem;
+            margin: 0.9rem 0;
+            border-radius: 4px;
+        }
+        
+        .highlight-box p {
+            margin: 0;
+            font-size: 0.96rem;
+            color: var(--color-text);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1100px) {
+            #globe-container {
+                width: 34%;
+                opacity: 0.32;
+            }
+
+            .reveal .slides section {
+                padding-right: 18rem;
+            }
+
+            .comparison-grid,
+            .bullet-grid,
+            .mini-metrics,
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+
+            .arch-flow {
+                justify-content: center;
+            }
+
+            #twinkle-star {
+                right: 11%;
+                top: 18%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #globe-container {
+                display: none;
+            }
+
+            #twinkle-star {
+                display: none;
+            }
+
+            .reveal .slides section {
+                padding: 0.7rem;
+                min-height: calc(100vh - 70px);
+                max-height: calc(100vh - 70px);
+            }
+
+            .hero-slide,
+            .closing-slide {
+                min-height: auto !important;
+            }
+
+            .reveal p,
+            .reveal li {
+                font-size: 0.88rem;
+                line-height: 1.4;
+            }
+
+            .reveal h1 {
+                font-size: 2.3rem;
+            }
+
+            .reveal h2 {
+                font-size: 1.65rem;
+            }
+
+            .reveal h3 {
+                font-size: 1.05rem;
+            }
+
+            .hero-logo {
+                font-size: 2.9rem;
+            }
+
+            .hero-tagline,
+            .closing-slide .tagline {
+                font-size: 1.05rem;
+            }
+
+            .closing-brand {
+                font-size: 2.5rem;
+            }
+
+            .hero-authors {
+                gap: 0.45rem;
+            }
+
+            .hero-authors span {
+                font-size: 0.78rem;
+                padding: 0.45rem 0.7rem;
+            }
+
+            .stat-number {
+                font-size: 2.2em;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+                gap: 0.9em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1em;
+            }
+
+            .arch-diagram {
+                padding: 1em;
+            }
+            
+            .arch-flow {
+                flex-direction: column;
+            }
+            
+            .arch-arrow {
+                transform: rotate(90deg);
+            }
+
+            .tech-stack {
+                gap: 0.6em;
+            }
+
+            .tech-badge {
+                font-size: 0.8em;
+                padding: 0.45em 0.9em;
+            }
+        }
+
+        @media (max-height: 760px) {
+            .reveal .slides section {
+                padding-top: 0.5em;
+                padding-bottom: 0.5em;
+            }
+
+            .reveal p,
+            .reveal li {
+                line-height: 1.45;
+            }
+
+            .reveal h1 {
+                font-size: 2.6rem;
+            }
+
+            .reveal h2 {
+                font-size: 1.9rem;
+            }
+
+            .hero-logo {
+                font-size: 3.6rem;
+            }
+
+            .closing-brand {
+                font-size: 3rem;
+            }
+
+            .accent-line {
+                margin: 0.6em 0;
+            }
+        }
+
+        @keyframes twinkle-star {
+            0% {
+                opacity: 0;
+                transform: scale(0.45);
+            }
+            20% {
+                opacity: 0.55;
+                transform: scale(0.95);
+            }
+            42% {
+                opacity: 1;
+                transform: scale(1.55);
+            }
+            68% {
+                opacity: 0.7;
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 0.18;
+                transform: scale(0.55);
+            }
+        }
+    </style>
+</head>
+<body class="hero-view">
+    <!-- Globe container -->
+    <div id="globe-container"></div>
+    <div id="twinkle-star"></div>
+    
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- Slide 1: Hero -->
+            <section class="hero-slide">
+                <div class="slide-kicker">Globális hírelemzés újragondolva</div>
+                <div class="hero-logo">PULZUS</div>
+                <div class="hero-tagline">Intelligens hírelemzés. Tisztább kép a világról.</div>
+                <div class="accent-line"></div>
+                <p class="lede">AI-alapú platform, amely segít értelmezni a híreket, felismerni a torzításokat, és megérteni a globális események magyar hatásait.</p>
+                <div class="hero-authors">
+                    <span>Makkos Koppány</span>
+                    <span>Kiss-Istók Balázs</span>
+                    <span>Kovács Liza</span>
+                </div>
+                <aside class="notes">
+                    Bevezetés: A PULZUS egy következő generációs hírelemzési platform, amely túlmutat a hagyományos hírportálokon.
+                </aside>
+            </section>
+            
+            <!-- Slide 2: Probléma -->
+            <section>
+                <div class="slide-kicker">A kihívás</div>
+                <h2>A Probléma</h2>
+                <div class="accent-line"></div>
+
+                <p class="lede">Ma túl sok az információ, túl kevés a valódi kontextus. A felhasználó gyakran nem azt nem tudja, mi történt, hanem azt, hogyan értelmezze.</p>
+
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">4000+</div>
+                        <div class="stat-label">Cikk naponta</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">73%</div>
+                        <div class="stat-label">Információs túlterhelés</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">0</div>
+                        <div class="stat-label">Mélyebb kontextus</div>
+                    </div>
+                </div>
+
+                <div class="bullet-grid">
+                    <div class="bullet-card">
+                        <h4>Széttöredezett fogyasztás</h4>
+                        <p>Különböző forrásokból jönnek az információk, de nincs egységes értelmezési keret.</p>
+                    </div>
+                    <div class="bullet-card">
+                        <h4>Torzítás és framing</h4>
+                        <p>Nehéz felismerni, ha ugyanazt az eseményt teljesen más narratívába csomagolják.</p>
+                    </div>
+                    <div class="bullet-card">
+                        <h4>Hiányzó magyar nézőpont</h4>
+                        <p>A globális hírekből sokszor nem derül ki, mit jelent mindez Magyarországnak.</p>
+                    </div>
+                    <div class="bullet-card">
+                        <h4>Információs túlterhelés</h4>
+                        <p>A mennyiség nő, a valódi átláthatóság és a gyors döntéstámogatás viszont csökken.</p>
+                    </div>
+                </div>
+                
+                <aside class="notes">
+                    A modern hírfogyasztás paradoxona: sosem volt több információnk, mégis nehezebb megérteni a világot. 
+                </aside>
+            </section>
+            
+            <!-- Slide 3: Megoldás -->
+            <section>
+                <div class="slide-kicker">A válaszunk</div>
+                <h2>A Megoldás: <span style="color: var(--color-accent);">PULZUS</span></h2>
+                <div class="accent-line"></div>
+                
+                <div class="highlight-box">
+                    <p><strong>Intelligens hírelemzési platform</strong>, amely AI segítségével dolgozza fel, elemzi és kontextualizálja a híreket – magyar szemszögből.</p>
+                </div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>AI-alapú értelmezés</h3>
+                        <p>Összefoglaló, hangulatelemzés, warning level és magyar relevancia.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Media Lens</h3>
+                        <p>Több forrás párhuzamos olvasata ugyanarról a témáról.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Globális áttekintés</h3>
+                        <p>Konfliktusgömb és gyors geopolitikai tájékozódás.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Magyar fókusz</h3>
+                        <p>Gazdasági dashboard és hazai hatások egy helyen.</p>
+                    </div>
+                </div>
+                
+                <aside class="notes">
+                    Nem csak hírportál – intelligens asszisztens, amely segít értelmet találni a káoszban.
+                </aside>
+            </section>
+            
+            <!-- Slide 4: Fő funkciók -->
+            <section>
+                <div class="slide-kicker">Funkciók</div>
+                <h2>Fő Funkciók</h2>
+                <div class="accent-line"></div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>🤖 AI Hírelemzés</h3>
+                        <p>Mélyebb elemzés, magyar összefoglalók, sentiment és figyelmeztetési szintek</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>🔍 Media Lens</h3>
+                        <p>Ugyanazon téma különböző forrásokból – propaganda és torzítás felismerése</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>🌍 Konfliktusgömb</h3>
+                        <p>Világpolitikai események és aktív konfliktusok interaktív térképen</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>📊 Piaci Dashboard</h3>
+                        <p>Magyar gazdaság és releváns stock market adatok egyhelyen</p>
+                    </div>
+                </div>
+
+                <p class="section-footnote">A PULZUS nem egyetlen nézetet ad, hanem egy döntéstámogató hír-ökoszisztémát.</p>
+                
+                <aside class="notes">
+                    Négy pillér: AI elemzés, forrás-összehasonlítás, geopolitikai áttekintés, gazdasági adatok.
+                </aside>
+            </section>
+            
+            <!-- Slide 5: AI Elemzés -->
+            <section>
+                <div class="slide-kicker">AI réteg</div>
+                <h2>AI-Alapú Cikkértelmezés</h2>
+                <div class="accent-line"></div>
+
+                <p class="lede">A felhasználó nem csak elolvassa a hírt, hanem mélyebbre is tud ásni benne.</p>
+
+                <div class="bullet-grid">
+                    <div class="bullet-card">
+                        <h4>Magyar összefoglaló</h4>
+                        <p>Gyors, érthető kivonat a cikk lényegéről.</p>
+                    </div>
+                    <div class="bullet-card">
+                        <h4>Magyar hatás</h4>
+                        <p>Mit jelent az esemény itthon gazdaságilag vagy politikailag?</p>
+                    </div>
+                    <div class="bullet-card">
+                        <h4>Sentiment + warning</h4>
+                        <p>Jelzi a hangulatot és a cikk kockázati szintjét.</p>
+                    </div>
+                    <div class="bullet-card">
+                        <h4>Beépített AI chat</h4>
+                        <p>Tovább lehet kérdezni a cikkről magyarul, kontextussal.</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p>A cikkek nem csak megjelennek – <strong>értelmezve és feldolgozva</strong> érkeznek hozzád.</p>
+                </div>
+                
+                <aside class="notes">
+                    Az AI nem helyettesít – segít mélyebben megérteni. Groq modell magyarázza el, mi történik.
+                </aside>
+            </section>
+            
+            <!-- Slide 6: Media Lens -->
+            <section>
+                <div class="slide-kicker">Forráskritika</div>
+                <h2>Media Lens: Forrás-Összehasonlítás</h2>
+                <div class="accent-line"></div>
+
+                <p class="lede">Ugyanaz a téma, három eltérő médiakeretezés: így válik láthatóvá a framing, a torzítás és a propaganda.</p>
+
+                <div class="comparison-grid">
+                    <div class="comparison-card">
+                        <h4>Független magyar</h4>
+                        <p>Háttérokok, következmények, részletesebb belső kontextus.</p>
+                    </div>
+                    <div class="comparison-card">
+                        <h4>Magyar mainstream</h4>
+                        <p>Erősebb politikai keretezés, nemzeti vagy ideológiai hangsúlyok.</p>
+                    </div>
+                    <div class="comparison-card">
+                        <h4>Nemzetközi</h4>
+                        <p>Tágabb geopolitikai olvasat, globális hatások és összehasonlítások.</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p>A <strong>Media Lens</strong> funkció ugyanarról az eseményről több forrást jelenít meg párhuzamosan, hogy felismerd a framing különbségeit és a potenciális torzításokat.</p>
+                </div>
+
+                <div class="mini-metrics">
+                    <div class="mini-metric">
+                        <div class="label">Társadalmi érték</div>
+                        <div class="meta">Fejleszti a kritikus gondolkodást és a médiatudatosságot.</div>
+                    </div>
+                    <div class="mini-metric">
+                        <div class="label">Felhasználói előny</div>
+                        <div class="meta">Nem csak egy narratívát látunk, hanem több nézőpontot egyszerre.</div>
+                    </div>
+                    <div class="mini-metric">
+                        <div class="label">Kulcshaszon</div>
+                        <div class="meta">Könnyebben észrevehető a torzítás, az elhallgatás vagy a túlzás.</div>
+                    </div>
+                </div>
+                
+                <aside class="notes">
+                    Kulcs a dezinformáció ellen: lásd meg, hogyan keretezi ugyanazt az eseményt különböző média.
+                </aside>
+            </section>
+            
+            <!-- Slide 7: Konfliktusgömb -->
+            <section>
+                <div class="slide-kicker">Geopolitika</div>
+                <h2>Konfliktusgömb: Globális Áttekintés</h2>
+                <div class="accent-line"></div>
+
+                <div class="two-col">
+                    <div>
+                        <p class="lede">A földgömb segít egy pillanat alatt átlátni, hol forrósodnak fel a világ eseményei.</p>
+                        <ul class="compact-list">
+                            <li><strong>Interaktív 3D nézet:</strong> aktív vagy friss konfliktusok vizuálisan</li>
+                            <li><strong>Kuratált adatok:</strong> gyors és érthető globális áttekintés</li>
+                            <li><strong>Geopolitikai kontextus:</strong> egy régió súlya és kapcsolódásai</li>
+                            <li><strong>Magyar relevancia:</strong> távoli események helyi hatással</li>
+                        </ul>
+                    </div>
+                    <div class="bullet-grid" style="margin-top: 0;">
+                        <div class="bullet-card">
+                            <h4>Miért hasznos?</h4>
+                            <p>Segít kilépni a lokális hírnézetből és világban gondolkodni.</p>
+                        </div>
+                        <div class="bullet-card">
+                            <h4>Felhasználói élmény</h4>
+                            <p>Az események földrajzilag is értelmezhetővé válnak.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p>Egy kattintással lásd, <strong>mi történik a világban</strong> – háborúk, választások, diplomáciai feszültségek.</p>
+                </div>
+                
+                <aside class="notes">
+                    Globális tudatosság egy kattintásra. A föld forog, az események változnak – kövesd nyomon őket.
+                </aside>
+            </section>
+            
+            <!-- Slide 8: Piacok és Gazdaság -->
+            <section>
+                <div class="slide-kicker">Gazdasági réteg</div>
+                <h2>Piacok és Magyar Gazdaság</h2>
+                <div class="accent-line"></div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>📈 Stock Market</h3>
+                        <p>S&P 500, Nasdaq, DAX, BUX – releváns indexek egyhelyen</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>🇭🇺 Magyar Gazdaság</h3>
+                        <p>Forint árfolyam, infláció, GDP adatok és trendek</p>
+                    </div>
+                </div>
+
+                <div class="mini-metrics">
+                    <div class="mini-metric">
+                        <div class="label">Friss adatok</div>
+                        <div class="meta">Piaci és gazdasági információk egy közös felületen.</div>
+                    </div>
+                    <div class="mini-metric">
+                        <div class="label">Értelmezett számok</div>
+                        <div class="meta">A dashboard nem csak mutatja, hanem elmagyarázza a trendeket.</div>
+                    </div>
+                    <div class="mini-metric">
+                        <div class="label">Döntéstámogatás</div>
+                        <div class="meta">Diákoknak, érdeklődőknek és befektetői szemléletű felhasználóknak is hasznos.</div>
+                    </div>
+                </div>
+                
+                <aside class="notes">
+                    Gazdasági trendek és pénzügyi adatok – nemcsak a hírek, hanem a számok is fontosak.
+                </aside>
+            </section>
+            
+            <!-- Slide 9: Technikai Architektúra -->
+            <section class="arch-slide">
+                <div class="slide-kicker">Rendszerterv</div>
+                <h2>Technikai Architektúra</h2>
+                <div class="accent-line"></div>
+                
+                <div class="arch-diagram">
+                    <div class="arch-flow">
+                        <div class="arch-box">
+                            <h4>GNews API</h4>
+                            <p>Hírek begyűjtése</p>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-box">
+                            <h4>Supabase Edge</h4>
+                            <p>Backend logika</p>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-box">
+                            <h4>Groq AI</h4>
+                            <p>Elemzés</p>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-box">
+                            <h4>Supabase DB</h4>
+                            <p>Tárolás</p>
+                        </div>
+                        <div class="arch-arrow">→</div>
+                        <div class="arch-box">
+                            <h4>React Frontend</h4>
+                            <p>Megjelenítés</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p>Adatfolyam: külső API → Edge Function → Groq AI elemzés → Supabase adatbázis → React alapú megjelenítés.</p>
+                </div>
+
+                <div class="tech-stack">
+                    <div class="tech-badge">React + TypeScript</div>
+                    <div class="tech-badge">Vite</div>
+                    <div class="tech-badge">Tailwind CSS</div>
+                    <div class="tech-badge">shadcn/ui</div>
+                    <div class="tech-badge">Supabase</div>
+                    <div class="tech-badge">Groq (llama-3.3-70b)</div>
+                </div>
+                
+                <aside class="notes">
+                    Modern tech stack: serverless backend, AI API integráció, strukturált adatfeldolgozás.
+                </aside>
+            </section>
+            
+            <!-- Slide 10: Fejlesztési Eszközök -->
+            <section>
+                <div class="slide-kicker">Fejlesztési workflow</div>
+                <h2>Fejlesztési Eszközök és AI-k</h2>
+                <div class="accent-line"></div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>🧠 Ötletelés</h3>
+                        <p><strong>Claude</strong> – Termékstratégia és architektúra</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>💻 Programozás</h3>
+                        <p><strong>Lovely, Codex, ChatGPT</strong> – Kód generálás és debugging</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>⚡ AI Backend</h3>
+                        <p><strong>Groq</strong> – Villámgyors inferencia (llama-3.3-70b)</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h3>📦 Infrastruktúra</h3>
+                        <p><strong>Supabase</strong> – Serverless backend és PostgreSQL</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>AI-asszisztált fejlesztés:</strong> A projekt teljes mértékben AI együttműködéssel született.</p>
+                </div>
+                
+                <aside class="notes">
+                    Kollaboratív AI fejlesztés – minden rétegben használtunk AI segítséget.
+                </aside>
+            </section>
+            
+            <!-- Slide 11: Mit Tanultunk -->
+            <section>
+                <div class="slide-kicker">Tanulási eredmény</div>
+                <h2>Mit Tanultunk</h2>
+                <div class="accent-line"></div>
+
+                <div class="bullet-grid">
+                    <div class="bullet-card"><h4>Adatbázis-kezelés</h4><p>Supabase táblák, lekérdezések, adatmodell.</p></div>
+                    <div class="bullet-card"><h4>API integráció</h4><p>Külső adatforrások összekötése a rendszerrel.</p></div>
+                    <div class="bullet-card"><h4>Adatpipeline</h4><p>Automatizált hírfrissítési és elemzési folyamat.</p></div>
+                    <div class="bullet-card"><h4>Prompt engineering</h4><p>Pontosabb, strukturált AI kimenetek tervezése.</p></div>
+                    <div class="bullet-card"><h4>AI integráció</h4><p>Modell bekötése valós termékélménybe.</p></div>
+                    <div class="bullet-card"><h4>Frontend + backend</h4><p>Teljes end-to-end rendszerépítés.</p></div>
+                    <div class="bullet-card"><h4>UI/UX tervezés</h4><p>Dashboard-logika és információs hierarchia.</p></div>
+                    <div class="bullet-card"><h4>Iteratív fejlesztés</h4><p>Hibajavítás, validáció, finomhangolás.</p></div>
+                </div>
+                
+                <aside class="notes">
+                    Valódi gyakorlati tapasztalat – adatfeldolgozástól a felhasználói felületig.
+                </aside>
+            </section>
+            
+            <!-- Slide 12: Záró -->
+            <section class="closing-slide">
+                <div class="slide-kicker">Zárás</div>
+                <div class="closing-brand">PULZUS</div>
+                <div class="accent-line" style="margin: 1em auto;"></div>
+                <p class="tagline">Érts meg többet. Láss tisztábban.</p>
+                <div class="closing-subtle">Intelligens hírelemzés a világ zajában</div>
+                
+                <aside class="notes">
+                    Záró gondolat: Az információs társadalomban a minőségi hírfogyasztás alapvető készség. A PULZUS ebben segít.
+                </aside>
+            </section>
+            
+        </div>
+    </div>
+    
+    <!-- Three.js for globe -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Reveal.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    
+    <script>
+        // Initialize Reveal.js
+        Reveal.initialize({
+            hash: true,
+            width: 1366,
+            height: 768,
+            margin: 0.05,
+            minScale: 0.35,
+            maxScale: 1.0,
+            transition: 'fade',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+            progress: true,
+            controls: true,
+            slideNumber: true,
+            history: true,
+            center: false,
+            plugins: [ RevealNotes ]
+        });
+        
+        // Three.js Globe Setup
+        let scene, camera, renderer, globe, wireframe, globeGroup;
+        let currentRotationY = 0;
+        let targetRotationY = 0;
+        let currentRotationX = 0.18;
+        let targetRotationX = 0.18;
+        let currentCameraZ = 5.4;
+        let targetCameraZ = 5.4;
+        let currentScale = 1.12;
+        let targetScale = 1.12;
+        
+        function initGlobe() {
+            const container = document.getElementById('globe-container');
+            
+            // Scene
+            scene = new THREE.Scene();
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                45,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.z = 3;
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+            
+            // Globe geometry
+            const geometry = new THREE.SphereGeometry(1, 64, 64);
+            
+            // Earth texture (procedural)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient earth-like texture
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(0.3, '#0f3460');
+            gradient.addColorStop(0.5, '#16213e');
+            gradient.addColorStop(0.7, '#0f3460');
+            gradient.addColorStop(1, '#1a1a2e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add landmasses (simplified)
+            ctx.fillStyle = 'rgba(196, 30, 58, 0.3)';
+            for (let i = 0; i < 200; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const size = Math.random() * 30 + 10;
+                ctx.fillRect(x, y, size, size * 0.6);
+            }
+            
+            // Add glow points
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            
+            // Material
+            const material = new THREE.MeshPhongMaterial({
+                map: texture,
+                emissive: new THREE.Color(0x0a0a0a),
+                emissiveIntensity: 0.2,
+                shininess: 10,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            globeGroup = new THREE.Group();
+            scene.add(globeGroup);
+
+            globe = new THREE.Mesh(geometry, material);
+            globeGroup.add(globe);
+            
+            // Wireframe overlay
+            const wireframeGeometry = new THREE.SphereGeometry(1.01, 32, 32);
+            const wireframeMaterial = new THREE.MeshBasicMaterial({
+                color: 0xc41e3a,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15
+            });
+            wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+            globeGroup.add(wireframe);
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const pointLight = new THREE.PointLight(0xc41e3a, 1, 100);
+            pointLight.position.set(5, 3, 5);
+            scene.add(pointLight);
+            
+            const pointLight2 = new THREE.PointLight(0xffffff, 0.5, 100);
+            pointLight2.position.set(-5, -3, -5);
+            scene.add(pointLight2);
+            
+            // Start animation
+            updateGlobeState(Reveal.getIndices().h || 0);
+            animateGlobe();
+        }
+        
+        function animateGlobe() {
+            requestAnimationFrame(animateGlobe);
+
+            if (!globe || !wireframe || !camera || !globeGroup) return;
+
+            currentRotationY += (targetRotationY - currentRotationY) * 0.04;
+            currentRotationX += (targetRotationX - currentRotationX) * 0.04;
+            currentCameraZ += (targetCameraZ - currentCameraZ) * 0.04;
+            currentScale += (targetScale - currentScale) * 0.04;
+
+            const time = Date.now() * 0.00018;
+            globe.rotation.y = currentRotationY + time;
+            globe.rotation.x = currentRotationX + Math.sin(Date.now() * 0.00022) * 0.03;
+
+            wireframe.rotation.y = globe.rotation.y + 0.002;
+            wireframe.rotation.x = globe.rotation.x;
+
+            camera.position.z = currentCameraZ;
+            camera.lookAt(0, 0, 0);
+
+            globeGroup.scale.setScalar(currentScale);
+            
+            renderer.render(scene, camera);
+        }
+
+        function updateGlobeState(slideIndex) {
+            const body = document.body;
+            const isHero = slideIndex === 0;
+            const totalSlides = Reveal.getTotalSlides();
+            const isOutro = slideIndex === totalSlides - 1;
+
+            body.classList.toggle('hero-view', isHero);
+            body.classList.toggle('outro-view', isOutro);
+
+            if (isHero) {
+                targetRotationY = -0.7;
+                targetRotationX = 0.2;
+                targetCameraZ = 5.4;
+                targetScale = 1.12;
+            } else if (isOutro) {
+                targetRotationY = 0.85;
+                targetRotationX = 0.16;
+                targetCameraZ = 5.9;
+                targetScale = 1.16;
+            } else {
+                targetRotationY = -1.6 + slideIndex * 0.28;
+                targetRotationX = 0.14 + (slideIndex % 3) * 0.03;
+                targetCameraZ = 3.15;
+                targetScale = 1.02;
+            }
+        }
+
+        // Change globe orientation on slide change
+        Reveal.on('ready', event => {
+            updateGlobeState(event.indexh || 0);
+        });
+
+        Reveal.on('slidechanged', event => {
+            updateGlobeState(event.indexh || 0);
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (!camera || !renderer) {
+                return;
+            }
+            const container = document.getElementById('globe-container');
+            if (!container || container.clientWidth === 0 || container.clientHeight === 0) {
+                return;
+            }
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+        
+        // Initialize globe when page loads
+        window.addEventListener('load', initGlobe);
+    </script>
+</body>
+</html>

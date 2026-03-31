@@ -10,9 +10,10 @@ export interface Article {
   title: string;
   source: string;
   url: string;
+  image_url?: string;
   published_at: string;
   sentiment_score: number;
-  topics: string;
+  topics: string | string[];
   affects_hungary: boolean;
   hungary_impact: string;
   warning_level: string;

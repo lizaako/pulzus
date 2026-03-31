@@ -15,21 +15,21 @@ export default function ConflictDetail({ conflict, onClose }: ConflictDetailProp
   const style = severityStyles[conflict.severity?.toLowerCase()] || severityStyles.low;
 
   return (
-    <div className="glass-panel p-5 space-y-4 animate-fade-in-up">
+    <div className="glass-panel p-6 space-y-6 animate-fade-in-up">
       <div className="flex items-start justify-between">
-        <h3 className="font-display text-sm font-bold text-primary glow-text uppercase tracking-wider">
+        <h3 className="font-display text-xl font-extrabold text-foreground uppercase tracking-[0.08em]">
           {conflict.event_type}
         </h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-[0.18em] text-[10px]">
           <X className="w-4 h-4" />
         </button>
       </div>
 
       <div className="neon-line" />
 
-      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${style}`}>
+      <div className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] border ${style}`}>
         <AlertTriangle className="w-3 h-3" />
-        {conflict.severity?.toUpperCase()}
+        Kockázati szint
       </div>
 
       <div className="space-y-2.5 text-sm">
@@ -49,7 +49,7 @@ export default function ConflictDetail({ conflict, onClose }: ConflictDetailProp
         )}
       </div>
 
-      <p className="text-sm text-muted-foreground leading-relaxed">{conflict.description}</p>
+      <p className="text-[15px] text-muted-foreground leading-[1.6]">{conflict.description}</p>
 
       <div className="text-xs text-muted-foreground/60">
         Forrás: {conflict.source}

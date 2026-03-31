@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { Bot, LoaderCircle, Send, Sparkles } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 
 interface NewsInsightChatProps {
   article: Article | null;
@@ -95,15 +95,12 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
       <DialogContent className="max-w-3xl border-primary/20 bg-card/95 p-0 backdrop-blur-xl">
         {article && (
           <div className="grid max-h-[85vh] grid-cols-1 overflow-hidden lg:grid-cols-[320px_1fr]">
-            <aside className="border-b border-border/50 bg-muted/20 p-5 lg:border-b-0 lg:border-r">
+            <aside className="border-b border-border bg-secondary p-6 lg:border-b-0 lg:border-r">
               <DialogHeader className="space-y-3 text-left">
-                <div className="flex items-center gap-2 text-primary">
-                  <Sparkles className="h-4 w-4" />
-                  <DialogTitle className="font-display text-base tracking-wide">
-                    AI HÍRELEMZŐ CHAT
-                  </DialogTitle>
-                </div>
-                <DialogDescription className="text-xs leading-relaxed">
+                <DialogTitle className="font-display text-2xl font-extrabold tracking-[-0.02em] text-foreground">
+                  Hírelemző chat
+                </DialogTitle>
+                <DialogDescription className="text-[15px] leading-[1.6]">
                   Merülj el egy konkrét hírben anélkül, hogy kilépnél a vezérlőpultról.
                 </DialogDescription>
               </DialogHeader>
@@ -124,7 +121,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                   {article.affects_hungary && <Badge variant="destructive">Magyar hatás</Badge>}
                 </div>
 
-                <div className="rounded-lg border border-border/40 bg-background/40 p-3">
+                <div className="border border-border bg-card p-4">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                     Összefoglaló
                   </p>
@@ -144,7 +141,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                       {topics.map((topic) => (
                         <span
                           key={topic}
-                          className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary"
+                          className="border border-border bg-card px-2 py-1 text-[10px] font-medium text-foreground"
                         >
                           {topic}
                         </span>
@@ -163,7 +160,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                         key={suggestion}
                         type="button"
                         variant="outline"
-                        className="justify-start whitespace-normal border-border/50 bg-background/30 text-left text-xs"
+                        className="justify-start whitespace-normal text-left text-xs"
                         onClick={() => void submitQuestion(suggestion)}
                         disabled={isSending}
                       >
@@ -176,12 +173,11 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
             </aside>
 
             <section className="flex min-h-[560px] flex-col">
-              <div className="border-b border-border/50 px-5 py-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Bot className="h-4 w-4 text-primary" />
+              <div className="border-b border-border px-6 py-5">
+                <div className="text-sm font-display font-bold uppercase tracking-[0.18em] text-foreground">
                   Hírsegéd
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-2 text-[14px] text-muted-foreground">
                   A legjobb eredményt backendhez kötött Groq végponttal adja. Addig az alkalmazásban már betöltött cikkadatokkal dolgozik.
                 </p>
               </div>
@@ -197,7 +193,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                         className={
                           message.role === 'user'
                             ? 'max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-3 text-sm text-primary-foreground'
-                            : 'max-w-[90%] rounded-2xl rounded-bl-sm border border-border/50 bg-muted/30 px-4 py-3 text-sm text-foreground'
+                            : 'max-w-[90%] border border-border bg-secondary px-4 py-3 text-sm text-foreground'
                         }
                       >
                         {message.content}
@@ -207,7 +203,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
 
                   {isSending && (
                     <div className="flex justify-start">
-                      <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground">
                         <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
                         Elemzem ezt a hírt...
                       </div>
@@ -218,7 +214,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
               </ScrollArea>
 
               <form onSubmit={handleSubmit} className="border-t border-border/50 p-4">
-                <div className="rounded-xl border border-border/50 bg-background/40 p-3">
+                <div className="border border-border bg-card p-4">
                   <Textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -235,7 +231,6 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                       className="gap-2"
                       disabled={isSending || !draft.trim()}
                     >
-                      <Send className="h-4 w-4" />
                       Kérdezd az AI-t
                     </Button>
                   </div>

@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { MarketData } from '@/lib/supabase';
 
 interface ChartPanelProps {
@@ -18,7 +17,7 @@ interface ChartPanelProps {
 const chartConfig: ChartConfig = {
   price: {
     label: 'Ár',
-    color: 'hsl(195 100% 50%)',
+    color: '#C8243C',
   },
 };
 
@@ -68,7 +67,7 @@ function buildDisplayHistory(history: MarketData[], symbol: string): { data: Mar
 
 function SymbolChart({ symbol }: { symbol: string }) {
   const { history, loading } = useMarketHistory(symbol);
-  const { data: displayHistory, synthetic } = useMemo(() => buildDisplayHistory(history, symbol), [history, symbol]);
+  const { data: displayHistory } = useMemo(() => buildDisplayHistory(history, symbol), [history, symbol]);
 
   const chartData = useMemo(
     () =>
@@ -86,17 +85,12 @@ function SymbolChart({ symbol }: { symbol: string }) {
   const isPositive = changePct ? parseFloat(changePct) >= 0 : true;
 
   return (
-    <div className="p-3 rounded-lg bg-muted/20 border border-border/20 space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 bg-card border border-border space-y-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-foreground">{symbol}</span>
-          {synthetic && (
-            <Badge variant="outline" className="border-warning/30 bg-warning/10 text-[9px] text-warning">
-              Becsült görbe
-            </Badge>
-          )}
+          <span className="text-[14px] font-display font-bold text-foreground">{symbol}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {latestPrice != null && (
             <span className="text-xs font-mono text-foreground">
               {latestPrice.toLocaleString('hu-HU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -121,15 +115,15 @@ function SymbolChart({ symbol }: { symbol: string }) {
       ) : (
         <ChartContainer config={chartConfig} className="h-28 w-full">
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(225 20% 18%)" />
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'hsl(215 15% 55%)' }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 9, fill: 'hsl(215 15% 55%)' }} domain={['auto', 'auto']} width={45} />
+            <CartesianGrid strokeDasharray="0" stroke="#D6D0C7" />
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#5C5750' }} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 9, fill: '#5C5750' }} domain={['auto', 'auto']} width={45} />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Line
               type="monotone"
               dataKey="price"
-              stroke={isPositive ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
-              strokeWidth={1.5}
+              stroke="#C8243C"
+              strokeWidth={2}
               dot={false}
               activeDot={{ r: 3 }}
             />
@@ -139,7 +133,6 @@ function SymbolChart({ symbol }: { symbol: string }) {
 
       <div className="flex items-center justify-between gap-2 text-[9px] text-muted-foreground tracking-wider">
         <span>1 HÓNAPOS NÉZET</span>
-        {synthetic && <span>1 adatpontból becsülve</span>}
       </div>
     </div>
   );
@@ -147,12 +140,12 @@ function SymbolChart({ symbol }: { symbol: string }) {
 
 export default function ChartPanel({ symbols }: ChartPanelProps) {
   return (
-    <div className="glass-panel flex flex-col h-full">
-      <div className="p-4 border-b border-border/50">
-        <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">📈 GRAFIKONOK</h2>
+    <div className="glass-panel flex flex-col h-full min-h-0 overflow-hidden">
+      <div className="p-4 sm:p-6 border-b border-border">
+        <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-[-0.02em]">Grafikonok</h2>
       </div>
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-3">
+      <ScrollArea className="flex-1 min-h-0 p-4 sm:p-5 xl:p-6">
+        <div className="space-y-4">
           {symbols.map((s) => (
             <SymbolChart key={s} symbol={s} />
           ))}
