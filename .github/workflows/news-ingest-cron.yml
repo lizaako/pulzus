@@ -1,0 +1,18 @@
+name: Fetch News Cron
+
+on:
+  schedule:
+    # Runs every 2 hours to stay well within the GNews 100/day free limit
+    # 24 hours / 2 = 12 requests per day (out of 100)
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  run-news-ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger news-ingest Supabase Edge Function
+        run: |
+          curl -X POST "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/news-ingest" \
+            -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json"

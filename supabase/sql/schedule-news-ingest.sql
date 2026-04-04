@@ -2,8 +2,8 @@ select vault.create_secret('https://vrquxovkptfigrjsmhng.supabase.co', 'project_
 select vault.create_secret('IDE_A_SUPABASE_PUBLISHABLE_VAGY_ANON_KULCSOD', 'anon_key');
 
 select cron.schedule(
-  'news-ingest-every-10-minutes',
-  '*/10 * * * *',
+  'news-ingest-every-2-hours',
+  '0 */2 * * *',
   $$
   select
     net.http_post(
