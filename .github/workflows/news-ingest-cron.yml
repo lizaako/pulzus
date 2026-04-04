@@ -13,6 +13,6 @@ jobs:
     steps:
       - name: Trigger news-ingest Supabase Edge Function
         run: |
-          curl -X POST "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/news-ingest" \
+          curl -f -sS -X POST "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/news-ingest" \
             -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
             -H "Content-Type: application/json"

@@ -75,7 +75,7 @@ function normalizeText(article: RawArticle): string {
 
 async function fetchLatestNews(apiKey: string): Promise<RawArticle[]> {
   const query = encodeURIComponent('geopolitics OR economy OR markets OR Europe');
-  const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&country=us&max=10&apikey=${apiKey}`;
+  const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&country=us&max=10&sortby=publishedAt&apikey=${apiKey}`;
 
   const response = await fetch(url);
 

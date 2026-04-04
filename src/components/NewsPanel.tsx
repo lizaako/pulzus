@@ -115,7 +115,9 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{article.source}</span>
+                <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {article.source} &bull; {new Date(article.published_at).toLocaleDateString('hu-HU')}
+                </span>
                 {warningBadge(article.warning_level)}
                 {article.affects_hungary && (
                   <span className="text-[10px] px-2 py-1 bg-destructive text-destructive-foreground border border-destructive uppercase tracking-[0.18em]">Magyar hatás</span>
