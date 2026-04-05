@@ -29,27 +29,34 @@ export default function MarketPanel({ marketData, loading }: MarketPanelProps) {
       <h2 className="font-display text-sm font-bold text-primary glow-text tracking-wider">💰 PIACOK</h2>
       <div className="neon-line" />
       <div className="space-y-2">
-        {entries.map((d) => {
+          {entries.map((d) => {
           const isPositive = d.change_percent >= 0;
           return (
             <div
               key={d.symbol}
-              className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border/20 hover:border-primary/20 transition-all"
+              className="p-2.5 rounded-lg bg-muted/20 border border-border/20 hover:border-primary/20 transition-all space-y-1.5"
             >
-              <div>
-                <div className="text-xs font-bold text-foreground">{d.symbol}</div>
-                <div className="text-[10px] text-muted-foreground">{d.company}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-mono font-bold text-foreground">
-                  {d.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="text-[10px] text-muted-foreground ml-1">{d.currency}</span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-foreground">{d.symbol}</div>
+                  <div className="text-[10px] text-muted-foreground">{d.company}</div>
                 </div>
-                <div className={`flex items-center gap-0.5 justify-end text-xs font-mono ${isPositive ? 'text-success' : 'text-destructive'}`}>
-                  {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {isPositive ? '+' : ''}{d.change_percent?.toFixed(2)}%
+                <div className="flex-1 text-right">
+                  <div className="text-sm font-mono font-bold text-foreground">
+                    {d.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <span className="text-[10px] text-muted-foreground ml-1">{d.currency}</span>
+                  </div>
+                  <div className={`flex items-center gap-0.5 justify-end text-xs font-mono ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                    {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    {isPositive ? '+' : ''}{d.change_percent?.toFixed(2)}%
+                  </div>
                 </div>
               </div>
+              {d.explanation && (
+                <div className="text-[11px] text-muted-foreground pl-2 border-l border-primary/30 italic">
+                  {d.explanation}
+                </div>
+              )}
             </div>
           );
         })}

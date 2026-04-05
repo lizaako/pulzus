@@ -41,4 +41,6 @@ export interface MarketData {
   change_percent: number;
   currency: string;
   recorded_at: string;
+  explanation?: string;
+  trend?: 'up' | 'down' | 'neutral';
 }

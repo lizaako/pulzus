@@ -1,0 +1,17 @@
+name: Fetch Markets Cron
+
+on:
+  schedule:
+    # Runs every 6 hours (4 times a day)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  run-markets-ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger markets-ingest Supabase Edge Function
+        run: |
+          curl -f -sS -X POST "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/markets-ingest" \
+            -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json"

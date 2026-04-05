@@ -28,6 +28,20 @@ interface StoredArticle {
   summary: string;
 }
 
+interface StoredConflict {
+  event_id: string;
+  event_date: string;
+  event_type: string;
+  country: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  fatalities: number;
+  description: string;
+  source: string;
+  severity: string;
+}
+
 interface AnalysisResult {
   summary: string;
   warning_level: 'high' | 'medium' | 'low';
@@ -35,6 +49,16 @@ interface AnalysisResult {
   topics: string[];
   affects_hungary: boolean;
   hungary_impact: string;
+  conflict?: {
+    event_type: string;
+    country: string;
+    location: string;
+    latitude: number;
+    longitude: number;
+    description: string;
+    severity: 'high' | 'medium' | 'low';
+    fatalities: number;
+  };
 }
 
 function serializeError(error: unknown) {
@@ -74,17 +98,43 @@ function normalizeText(article: RawArticle): string {
 }
 
 async function fetchLatestNews(apiKey: string): Promise<RawArticle[]> {
-  const query = encodeURIComponent('geopolitics OR economy OR markets OR Europe');
-  const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&country=us&max=10&sortby=publishedAt&apikey=${apiKey}`;
+  const queryEn = encodeURIComponent('geopolitics OR economy OR markets OR Europe OR war');
+  const queryHu = encodeURIComponent('gazdaság OR politika OR háború OR külföld');
 
-  const response = await fetch(url);
+  const [resEn, resHu] = await Promise.all([
+    fetch(`https://gnews.io/api/v4/search?q=${queryEn}&lang=en&country=us&max=10&sortby=publishedAt&apikey=${apiKey}`),
+    fetch(`https://gnews.io/api/v4/search?q=${queryHu}&lang=hu&country=hu&max=10&sortby=publishedAt&apikey=${apiKey}`)
+  ]);
 
-  if (!response.ok) {
-    throw new Error(`GNews fetch failed with status ${response.status}`);
+  if (!resEn.ok) {
+    throw new Error(`English GNews fetch failed with status ${resEn.status}`);
+  }
+  if (!resHu.ok) {
+    throw new Error(`Hungarian GNews fetch failed with status ${resHu.status}`);
   }
 
-  const data = await response.json();
-  return Array.isArray(data?.articles) ? data.articles : [];
+  const dataEn = await resEn.json();
+  const dataHu = await resHu.json();
+
+  const allArticles = [
+    ...(Array.isArray(dataEn?.articles) ? dataEn.articles : []),
+    ...(Array.isArray(dataHu?.articles) ? dataHu.articles : [])
+  ];
+
+  // Remove duplicate URLs
+  const uniqueUrls = new Set<string>();
+  const filtered: RawArticle[] = [];
+  for (const a of allArticles) {
+    if (a.url && !uniqueUrls.has(a.url)) {
+      uniqueUrls.add(a.url);
+      filtered.push(a);
+    }
+  }
+
+  // Sort by publishedAt newest first
+  filtered.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+  
+  return filtered.slice(0, 15); // Return top 15 newest articles
 }
 
 async function analyzeArticleWithGroq(article: RawArticle, groqApiKey: string): Promise<AnalysisResult> {
@@ -99,13 +149,15 @@ async function analyzeArticleWithGroq(article: RawArticle, groqApiKey: string): 
     '  "sentiment_score": -1 es 1 kozotti szam,',
     '  "topics": ["tema1", "tema2"],',
     '  "affects_hungary": true vagy false,',
-    '  "hungary_impact": "magyar nyelvu, kozertheto magyarazat"',
+    '  "hungary_impact": "magyar nyelvu, kozertheto magyarazat",',
+    '  "conflict": { "event_type": "string (pl. Fegyveres konfliktus)", "country": "string", "location": "string", "latitude": float, "longitude": float, "description": "megfelo leiras a konfliktusrol", "severity": "high|medium|low", "fatalities": int }',
     '}',
     '',
     'Szabalyok:',
     '- A summary es a hungary_impact mindig magyarul legyen.',
     '- Ha nincs kozvetlen magyar hatas, akkor affects_hungary legyen false es a hungary_impact legyen rovid magyar mondat.',
     '- A topics maximum 4 elem legyen.',
+    '- A conflict MEZOT CSAK AKKOR HASZNALD, HA a cikk egy jelenlegi konkret fegyveres konfliktusrol, haborurol vagy eros zavargasrol szol. Ilyenkor ezt probald meg beazonositani. Ha a cikk egyaltalan nem haborurol vagy fizikai konfliktusrol (pl gazdasagi hir vagy politika), akkor NE rakj a JSON-ba conflict kulcsot.',
     '',
     `Cim: ${article.title || 'Nincs cim'}`,
     `Forras: ${normalizeSource(article.source)}`,
@@ -123,7 +175,7 @@ async function analyzeArticleWithGroq(article: RawArticle, groqApiKey: string): 
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       temperature: 0.2,
-      max_tokens: 700,
+      max_tokens: 800,
       messages: [
         {
           role: 'system',
@@ -158,6 +210,16 @@ async function analyzeArticleWithGroq(article: RawArticle, groqApiKey: string): 
     topics: Array.isArray(parsed.topics) ? parsed.topics.map((topic) => String(topic).trim()).filter(Boolean).slice(0, 4) : [],
     affects_hungary: Boolean(parsed.affects_hungary),
     hungary_impact: parsed.hungary_impact?.trim() || 'Nincs egyértelmű közvetlen magyar hatás megjelölve.',
+    conflict: parsed.conflict && typeof parsed.conflict === 'object' ? {
+      event_type: parsed.conflict.event_type || 'Katonai esemény',
+      country: parsed.conflict.country || 'Ismeretlen',
+      location: parsed.conflict.location || 'Ismeretlen',
+      latitude: typeof parsed.conflict.latitude === 'number' ? parsed.conflict.latitude : 0,
+      longitude: typeof parsed.conflict.longitude === 'number' ? parsed.conflict.longitude : 0,
+      description: parsed.conflict.description || parsed.summary || '',
+      severity: ['high', 'medium', 'low'].includes(parsed.conflict.severity as any) ? parsed.conflict.severity : 'medium',
+      fatalities: typeof parsed.conflict.fatalities === 'number' ? parsed.conflict.fatalities : 0,
+    } : undefined
   };
 }
 
@@ -215,10 +277,27 @@ Deno.serve(async (req) => {
     const newArticles = validArticles.filter((article) => !existingUrls.has(article.url as string));
 
     const analyzedArticles: StoredArticle[] = [];
+    const newConflicts: StoredConflict[] = [];
 
     for (const article of newArticles) {
       const analysis = await analyzeArticleWithGroq(article, groqApiKey);
       analyzedArticles.push(mapToStoredArticle(article, analysis));
+
+      if (analysis.conflict) {
+        newConflicts.push({
+          event_id: crypto.randomUUID(),
+          event_date: article.publishedAt || new Date().toISOString(),
+          event_type: analysis.conflict.event_type,
+          country: analysis.conflict.country,
+          location: analysis.conflict.location,
+          latitude: analysis.conflict.latitude,
+          longitude: analysis.conflict.longitude,
+          fatalities: analysis.conflict.fatalities,
+          description: analysis.conflict.description,
+          source: normalizeSource(article.source),
+          severity: analysis.conflict.severity,
+        });
+      }
     }
 
     if (analyzedArticles.length > 0) {
@@ -231,10 +310,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (newConflicts.length > 0) {
+      // Conflicts insertion is non-fatal if it fails (articles will still be logged as success)
+      const { error: conflictError } = await supabase
+        .from('conflicts')
+        .insert(newConflicts);
+
+      if (conflictError) {
+        console.error('Confict insert error:', conflictError);
+      }
+    }
+
     return new Response(JSON.stringify({
       fetched: latestNews.length,
       inserted: analyzedArticles.length,
       skipped: validArticles.length - newArticles.length,
+      conflictsInserted: newConflicts.length,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
