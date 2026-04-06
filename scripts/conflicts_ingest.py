@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Live conflict ingest:
-NewsAPI article stream -> country geolocation -> Supabase conflicts table.
+High-density live conflict ingest:
+GDELT GEO API -> Supabase conflicts table.
 
 Usage:
   python scripts/conflicts_ingest.py
@@ -9,55 +9,22 @@ Usage:
 Required env vars:
   SUPABASE_URL
   SUPABASE_SERVICE_ROLE_KEY
-  NEWSAPI_KEY
 """
 
 from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 import uuid
+import csv
+import time
+import random
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from urllib.parse import quote_plus
 from urllib.request import Request, urlopen
-
-
-COUNTRY_POINTS: Dict[str, tuple[str, float, float]] = {
-    "ukraine": ("Kyiv", 50.4501, 30.5234),
-    "russia": ("Moscow", 55.7558, 37.6173),
-    "israel": ("Jerusalem", 31.7683, 35.2137),
-    "palestine": ("Gaza City", 31.5017, 34.4668),
-    "gaza": ("Gaza City", 31.5017, 34.4668),
-    "lebanon": ("Beirut", 33.8938, 35.5018),
-    "syria": ("Damascus", 33.5138, 36.2765),
-    "yemen": ("Sanaa", 15.3694, 44.1910),
-    "iran": ("Tehran", 35.6892, 51.3890),
-    "iraq": ("Baghdad", 33.3152, 44.3661),
-    "sudan": ("Khartoum", 15.5007, 32.5599),
-    "congo": ("Goma", -1.6792, 29.2228),
-    "dr congo": ("Goma", -1.6792, 29.2228),
-    "myanmar": ("Naypyidaw", 19.7633, 96.0785),
-    "afghanistan": ("Kabul", 34.5553, 69.2075),
-    "pakistan": ("Islamabad", 33.6844, 73.0479),
-    "india": ("New Delhi", 28.6139, 77.2090),
-    "china": ("Beijing", 39.9042, 116.4074),
-    "taiwan": ("Taipei", 25.0330, 121.5654),
-    "south korea": ("Seoul", 37.5665, 126.9780),
-    "north korea": ("Pyongyang", 39.0392, 125.7625),
-    "somalia": ("Mogadishu", 2.0469, 45.3182),
-    "nigeria": ("Abuja", 9.0765, 7.3986),
-    "haiti": ("Port-au-Prince", 18.5944, -72.3074),
-    "serbia": ("Belgrade", 44.7866, 20.4489),
-    "hungary": ("Budapest", 47.4979, 19.0402),
-}
-
-CONFLICT_TERMS = [
-    "war", "bomb", "missile", "airstrike", "shelling", "artillery", "drone strike",
-    "rocket", "blast", "attack", "clash", "border conflict", "military strike",
-]
+from urllib.error import HTTPError, URLError
 
 
 def require_env(name: str) -> str:
@@ -67,79 +34,215 @@ def require_env(name: str) -> str:
     return value
 
 
-def get_json(url: str, headers: Dict[str, str] | None = None, timeout: int = 25) -> Dict[str, Any]:
-    req = Request(url, headers=headers or {"User-Agent": "pulzus-conflict-ingest/2.0"})
-    with urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="replace"))
+def get_text(url: str, timeout: int = 25, retries: int = 4) -> str:
+    req = Request(url, headers={"User-Agent": "pulzus-conflict-ingest/1.0"})
+    last_error: Exception | None = None
+
+    for attempt in range(retries):
+        try:
+            with urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except HTTPError as exc:
+            last_error = exc
+            if exc.code == 429 and attempt < retries - 1:
+                # Exponential backoff + jitter for GDELT rate limiting.
+                wait_s = (2 ** attempt) + random.uniform(0.4, 1.2)
+                print(f"[warn] 429 from source, retrying in {wait_s:.1f}s...", file=sys.stderr)
+                time.sleep(wait_s)
+                continue
+            raise
+        except URLError as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                wait_s = (1.2 * (attempt + 1)) + random.uniform(0.2, 0.8)
+                print(f"[warn] network error, retrying in {wait_s:.1f}s...", file=sys.stderr)
+                time.sleep(wait_s)
+                continue
+            raise
+
+    raise RuntimeError(f"Failed to fetch source after retries: {last_error}")
 
 
-def infer_severity(text: str) -> str:
-    score = 0
-    low = text.lower()
-    if any(k in low for k in ["massive", "heavy", "major", "dozens killed", "civilian casualties"]):
-        score += 2
-    if any(k in low for k in ["missile", "airstrike", "artillery", "drone strike", "bomb"]):
-        score += 2
-    if any(k in low for k in ["clash", "attack", "raid", "strike"]):
-        score += 1
-    if score >= 4:
+def parse_gdelt_features(raw_text: str) -> List[Dict[str, Any]]:
+    text = (raw_text or "").strip()
+    if not text:
+        return []
+
+    # Some GDELT responses are JSONP-like wrappers.
+    if text.startswith("callback(") and text.endswith(")"):
+        text = text[len("callback("):-1]
+
+    # Prefer JSON when available.
+    try:
+        payload = json.loads(text)
+        features = payload.get("features") or []
+        if isinstance(features, list):
+            return features
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: parse CSV-like output with columns such as name,lat,lon,count.
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return []
+    reader = csv.DictReader(lines)
+    parsed: List[Dict[str, Any]] = []
+    for row in reader:
+        name = (row.get("name") or row.get("Name") or "").strip()
+        lat = row.get("lat") or row.get("latitude") or row.get("Lat")
+        lon = row.get("lon") or row.get("longitude") or row.get("Lon") or row.get("lng")
+        count = row.get("count") or row.get("Count") or row.get("numarticles") or "1"
+        try:
+            lat_f = float(lat) if lat is not None else None
+            lon_f = float(lon) if lon is not None else None
+            count_i = int(float(count))
+        except (TypeError, ValueError):
+            continue
+        if lat_f is None or lon_f is None:
+            continue
+        parsed.append(
+            {
+                "properties": {"name": name, "count": count_i, "lat": lat_f, "lon": lon_f},
+                "geometry": {"coordinates": [lon_f, lat_f]},
+            }
+        )
+    return parsed
+
+
+def parse_location(name: str) -> Tuple[str, str]:
+    parts = [p.strip() for p in (name or "").split(",") if p.strip()]
+    if not parts:
+        return "Ismeretlen helyszin", "Ismeretlen orszag"
+    if len(parts) == 1:
+        return parts[0], "Ismeretlen orszag"
+    return parts[0], parts[-1]
+
+
+def severity_from_mentions(count: int) -> str:
+    if count >= 20:
         return "high"
-    if score >= 2:
+    if count >= 8:
         return "medium"
     return "low"
 
 
-def fetch_newsapi_conflicts(newsapi_key: str) -> List[Dict[str, Any]]:
-    query = quote_plus("(" + " OR ".join(f'"{term}"' for term in CONFLICT_TERMS) + ")")
-    url = (
-        "https://newsapi.org/v2/everything"
-        f"?q={query}&language=en&sortBy=publishedAt&pageSize=100"
+def fetch_gdelt_conflicts() -> List[Dict[str, Any]]:
+    query = quote_plus(
+        '"war" OR "bomb" OR "missile" OR "airstrike" OR "shelling" OR '
+        '"artillery" OR "drone strike" OR "border clash" OR "explosion"'
     )
-    data = get_json(url, headers={"X-Api-Key": newsapi_key, "User-Agent": "pulzus-conflict-ingest/2.0"})
-    articles = data.get("articles") or []
-    if not isinstance(articles, list):
-        return []
+    # GDELT GEO output is served via the doc endpoint with geo-capable modes.
+    urls = [
+        # Primary: high density, but lower volume than 700 to avoid frequent 429.
+        f"https://api.gdeltproject.org/api/v2/doc/doc?query={query}&mode=PointTheme&timespan=6h&maxrecords=180&format=json",
+        # Fallback shape.
+        f"https://api.gdeltproject.org/api/v2/doc/doc?query={query}&mode=GeoJSON&timespan=6h&maxrecords=120&format=json",
+    ]
 
-    rows: List[Dict[str, Any]] = []
+    all_features: List[Dict[str, Any]] = []
+    for url in urls:
+        try:
+            raw = get_text(url)
+            features = parse_gdelt_features(raw)
+            all_features.extend(features)
+        except Exception as exc:
+            print(f"[warn] GDELT fetch failed: {exc}", file=sys.stderr)
+
     seen = set()
     now_iso = datetime.now(timezone.utc).isoformat()
+    output: List[Dict[str, Any]] = []
 
-    for article in articles:
-        title = str(article.get("title") or "")
-        description = str(article.get("description") or "")
-        source_name = str((article.get("source") or {}).get("name") or "NewsAPI")
-        published_at = str(article.get("publishedAt") or now_iso)
-        body = f"{title}\n{description}".lower()
+    for feature in all_features:
+        props = feature.get("properties") or {}
+        geometry = feature.get("geometry") or {}
+        coords = geometry.get("coordinates") or []
 
-        if not any(term in body for term in CONFLICT_TERMS):
+        name = str(props.get("name") or "").strip()
+        count = int(float(props.get("count") or 0))
+
+        lon = None
+        lat = None
+        if isinstance(coords, list) and len(coords) >= 2:
+            lon = coords[0]
+            lat = coords[1]
+        else:
+            lon = props.get("lon")
+            lat = props.get("lat")
+
+        try:
+            lon_f = float(lon)
+            lat_f = float(lat)
+        except (TypeError, ValueError):
             continue
 
-        for country_key, (location, lat, lon) in COUNTRY_POINTS.items():
-            if not re.search(rf"\b{re.escape(country_key)}\b", body):
-                continue
+        if not name or count < 1:
+            continue
 
-            dedupe = f"{country_key}:{title.strip().lower()[:80]}"
-            if dedupe in seen:
-                continue
-            seen.add(dedupe)
+        dedupe_key = f"{round(lat_f, 2)}_{round(lon_f, 2)}"
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
 
-            rows.append(
-                {
-                    "event_id": str(uuid.uuid4()),
-                    "event_date": published_at,
-                    "event_type": "Fegyveres konfliktus hir",
-                    "country": country_key.title(),
-                    "location": location,
-                    "latitude": lat,
-                    "longitude": lon,
-                    "fatalities": 0,
-                    "description": title.strip()[:500] or "Konfliktus hirfrissites",
-                    "source": source_name,
-                    "severity": infer_severity(f"{title} {description}"),
-                }
-            )
+        location, country = parse_location(name)
+        severity = severity_from_mentions(count)
 
-    return rows[:220]
+        output.append(
+            {
+                "event_id": str(uuid.uuid4()),
+                "event_date": now_iso,
+                "event_type": "Fegyveres konfliktus jelzes",
+                "country": country,
+                "location": location,
+                "latitude": lat_f,
+                "longitude": lon_f,
+                "fatalities": 0,
+                "description": f"{count} friss hirhivatkozas alapjan aktiv konfliktus-esemeny a tersegben.",
+                "source": "GDELT GEO",
+                "severity": severity,
+            }
+        )
+
+    if output:
+        return output[:250]
+
+    # Last-resort fallback so map is never empty when API is rate-limited.
+    hotspot_fallback = [
+        ("Donetsk", "Ukraine", 48.0159, 37.8028, "high"),
+        ("Kharkiv", "Ukraine", 49.9935, 36.2304, "high"),
+        ("Gaza City", "Palestine", 31.5017, 34.4668, "high"),
+        ("Khan Yunis", "Palestine", 31.3461, 34.3036, "high"),
+        ("Sanaa", "Yemen", 15.3694, 44.1910, "medium"),
+        ("Aleppo", "Syria", 36.2021, 37.1343, "medium"),
+        ("Idlib", "Syria", 35.9306, 36.6339, "medium"),
+        ("Port Sudan", "Sudan", 19.6158, 37.2164, "high"),
+        ("El Fasher", "Sudan", 13.6279, 25.3494, "high"),
+        ("Goma", "DR Congo", -1.6792, 29.2228, "high"),
+        ("Beni", "DR Congo", 0.4911, 29.4731, "medium"),
+        ("Mogadishu", "Somalia", 2.0469, 45.3182, "medium"),
+        ("Kabul", "Afghanistan", 34.5553, 69.2075, "medium"),
+        ("Peshawar", "Pakistan", 34.0151, 71.5249, "medium"),
+        ("Bangkok", "Thailand", 13.7563, 100.5018, "low"),
+    ]
+    now_iso = datetime.now(timezone.utc).isoformat()
+    rows: List[Dict[str, Any]] = []
+    for location, country, lat, lon, severity in hotspot_fallback:
+        rows.append(
+            {
+                "event_id": str(uuid.uuid4()),
+                "event_date": now_iso,
+                "event_type": "Konfliktus hotspot (fallback)",
+                "country": country,
+                "location": location,
+                "latitude": lat,
+                "longitude": lon,
+                "fatalities": 0,
+                "description": "Forras atmenetileg limitelt (429), ideiglenes hotspot megjelenites.",
+                "source": "Fallback seed",
+                "severity": severity,
+            }
+        )
+    print("[warn] Using fallback hotspots because source returned no parseable features.", file=sys.stderr)
+    return rows
 
 
 def insert_conflicts_supabase(rows: List[Dict[str, Any]], supabase_url: str, service_key: str) -> None:
@@ -148,28 +251,33 @@ def insert_conflicts_supabase(rows: List[Dict[str, Any]], supabase_url: str, ser
         return
 
     endpoint = f"{supabase_url.rstrip('/')}/rest/v1/conflicts"
+    body = json.dumps(rows).encode("utf-8")
     req = Request(
         endpoint,
-        data=json.dumps(rows).encode("utf-8"),
+        data=body,
         headers={
             "Content-Type": "application/json",
             "apikey": service_key,
             "Authorization": f"Bearer {service_key}",
-            "Prefer": "return=minimal",
+            "Prefer": "return=representation",
         },
         method="POST",
     )
     with urlopen(req, timeout=30) as resp:
-        print(f"[info] Supabase insert status: {resp.getcode()}")
+        status = resp.getcode()
+        payload = resp.read().decode("utf-8", errors="replace")
+        print(f"[info] Supabase insert status: {status}")
         print(f"[info] Inserted rows: {len(rows)}")
+        if payload:
+            print(f"[info] Response: {payload[:400]}")
 
 
 def main() -> int:
     try:
         supabase_url = require_env("SUPABASE_URL")
         service_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
-        newsapi_key = require_env("NEWSAPI_KEY")
-        conflicts = fetch_newsapi_conflicts(newsapi_key)
+
+        conflicts = fetch_gdelt_conflicts()
         print(f"[info] Parsed conflicts: {len(conflicts)}")
         insert_conflicts_supabase(conflicts, supabase_url, service_key)
         return 0
