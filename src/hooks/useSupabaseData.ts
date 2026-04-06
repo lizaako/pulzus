@@ -25,8 +25,7 @@ export function useArticles() {
 }
 
 export function useConflicts() {
-  const [liveConflicts, setLiveConflicts] = useState<Conflict[]>([]);
-  const [historyConflicts, setHistoryConflicts] = useState<Conflict[]>([]);
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConflicts = useCallback(async () => {
@@ -34,38 +33,24 @@ export function useConflicts() {
       .from('conflicts')
       .select('*')
       .order('event_date', { ascending: false })
-      .limit(250); // Fetch enough rows for both live and history buckets
+      .limit(100); // Fetch more so we have material to deduplicate
     
     if (data) {
-      const liveCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // last 24 hours (live globe)
-      const historyCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // last 30 days
-      const isFallback = (conflict: Conflict) => (conflict.source || '').toLowerCase() === 'fallback seed';
-
-      const dedupeByPlace = (items: Conflict[]) => {
-        const unique: Conflict[] = [];
-        const seen = new Set<string>();
-        for (const item of items) {
-          const key = `${item.country}-${item.location}`.toLowerCase();
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 3); // 72 hours cutoff
+      
+      const unique = [];
+      const seen = new Set();
+      for (const d of data) {
+        if (new Date(d.event_date) > cutoff) {
+          const key = `${d.country}-${d.location}`.toLowerCase();
           if (!seen.has(key)) {
             seen.add(key);
-            unique.push(item);
+            unique.push(d);
           }
         }
-        return unique;
-      };
-      const preferRealOverFallback = (items: Conflict[]) => {
-        const real = items.filter((item) => !isFallback(item));
-        return real.length > 0 ? real : items;
-      };
-
-      const liveOnly = data.filter((d) => new Date(d.event_date) >= liveCutoff);
-      const historyOnly = data.filter((d) => {
-        const eventDate = new Date(d.event_date);
-        return eventDate < liveCutoff && eventDate >= historyCutoff;
-      });
-
-      setLiveConflicts(dedupeByPlace(preferRealOverFallback(liveOnly)).slice(0, 30));
-      setHistoryConflicts(dedupeByPlace(preferRealOverFallback(historyOnly)).slice(0, 80));
+      }
+      setConflicts(unique.slice(0, 30));
     }
     setLoading(false);
   }, []);
@@ -76,7 +61,7 @@ export function useConflicts() {
     return () => clearInterval(interval);
   }, [fetchConflicts]);
 
-  return { conflicts: liveConflicts, liveConflicts, historyConflicts, loading };
+  return { conflicts, loading };
 }
 
 export function useMarketData() {

@@ -15,21 +15,6 @@ interface RawArticle {
   publishedAt?: string;
 }
 
-interface GdeltArticle {
-  title?: string;
-  url?: string;
-  seendate?: string;
-  domain?: string;
-  sourcecountry?: string;
-}
-
-interface GdeltGeoPoint {
-  name?: string;
-  lat?: number;
-  lon?: number;
-  count?: number;
-}
-
 interface StoredArticle {
   title: string;
   source: string;
@@ -112,46 +97,28 @@ function normalizeText(article: RawArticle): string {
     .slice(0, 6000);
 }
 
-async function fetchJsonSafe<T>(url: string, label: string): Promise<T | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error(`${label} fetch failed`, { status: response.status });
-      return null;
-    }
-    return await response.json() as T;
-  } catch (error) {
-    console.error(`${label} fetch exception`, serializeError(error));
-    return null;
-  }
-}
-
 async function fetchLatestNews(apiKey: string): Promise<RawArticle[]> {
   const queryEn = encodeURIComponent('geopolitics OR economy OR markets OR Europe OR war');
   const queryHu = encodeURIComponent('gazdaság OR politika OR háború OR külföld');
-  const gdeltQuery = encodeURIComponent('("war" OR "bombing" OR "missile" OR "airstrike" OR "shelling" OR "armed conflict" OR "border clash") AND (sourcecountry:US OR sourcecountry:GB OR sourcecountry:HU)');
 
-  const [dataEn, dataHu, dataGdelt] = await Promise.all([
-    fetchJsonSafe<{ articles?: RawArticle[] }>(`https://gnews.io/api/v4/search?q=${queryEn}&lang=en&country=us&max=10&sortby=publishedAt&apikey=${apiKey}`, 'GNews EN'),
-    fetchJsonSafe<{ articles?: RawArticle[] }>(`https://gnews.io/api/v4/search?q=${queryHu}&lang=hu&country=hu&max=10&sortby=publishedAt&apikey=${apiKey}`, 'GNews HU'),
-    fetchJsonSafe<{ articles?: GdeltArticle[] }>(`https://api.gdeltproject.org/api/v2/doc/doc?query=${gdeltQuery}&mode=ArtList&maxrecords=40&format=json&sort=DateDesc`, 'GDELT Doc'),
+  const [resEn, resHu] = await Promise.all([
+    fetch(`https://gnews.io/api/v4/search?q=${queryEn}&lang=en&country=us&max=10&sortby=publishedAt&apikey=${apiKey}`),
+    fetch(`https://gnews.io/api/v4/search?q=${queryHu}&lang=hu&country=hu&max=10&sortby=publishedAt&apikey=${apiKey}`)
   ]);
 
-  const gdeltArticles: RawArticle[] = Array.isArray(dataGdelt?.articles)
-    ? (dataGdelt.articles as GdeltArticle[]).map((article) => ({
-      title: article.title,
-      description: `Konfliktus figyelo forras (${article.domain || article.sourcecountry || 'GDELT'})`,
-      content: article.title,
-      url: article.url,
-      source: article.domain || 'GDELT',
-      publishedAt: article.seendate ? new Date(article.seendate).toISOString() : undefined,
-    }))
-    : [];
+  if (!resEn.ok) {
+    throw new Error(`English GNews fetch failed with status ${resEn.status}`);
+  }
+  if (!resHu.ok) {
+    throw new Error(`Hungarian GNews fetch failed with status ${resHu.status}`);
+  }
+
+  const dataEn = await resEn.json();
+  const dataHu = await resHu.json();
 
   const allArticles = [
     ...(Array.isArray(dataEn?.articles) ? dataEn.articles : []),
-    ...(Array.isArray(dataHu?.articles) ? dataHu.articles : []),
-    ...gdeltArticles,
+    ...(Array.isArray(dataHu?.articles) ? dataHu.articles : [])
   ];
 
   // Remove duplicate URLs
@@ -167,88 +134,7 @@ async function fetchLatestNews(apiKey: string): Promise<RawArticle[]> {
   // Sort by publishedAt newest first
   filtered.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
   
-  return filtered.slice(0, 30); // Keep more candidates for conflict extraction
-}
-
-function parseLocationName(name: string): { location: string; country: string } {
-  const parts = name
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return { location: 'Ismeretlen helyszín', country: 'Ismeretlen ország' };
-  }
-  if (parts.length === 1) {
-    return { location: parts[0], country: 'Ismeretlen ország' };
-  }
-
-  return {
-    location: parts[0],
-    country: parts[parts.length - 1],
-  };
-}
-
-function severityFromMentions(count: number): 'high' | 'medium' | 'low' {
-  if (count >= 20) return 'high';
-  if (count >= 8) return 'medium';
-  return 'low';
-}
-
-async function fetchGeoConflictsFromGdelt(): Promise<StoredConflict[]> {
-  const geoQuery = encodeURIComponent('"war" OR "bomb" OR "missile" OR "airstrike" OR "shelling" OR "artillery" OR "drone strike" OR "border clash" OR "explosion"');
-  const pointThemeUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${geoQuery}&mode=PointTheme&timespan=1day&maxrecords=600&format=json`;
-  const geoJsonUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${geoQuery}&mode=GeoJSON&timespan=1day&maxrecords=600&format=json`;
-
-  const [pointThemeData, geoJsonData] = await Promise.all([
-    fetchJsonSafe<{ features?: Array<{ properties?: GdeltGeoPoint; geometry?: { coordinates?: number[] } }> }>(pointThemeUrl, 'GDELT GEO PointTheme'),
-    fetchJsonSafe<{ features?: Array<{ properties?: GdeltGeoPoint; geometry?: { coordinates?: number[] } }> }>(geoJsonUrl, 'GDELT GEO GeoJSON'),
-  ]);
-
-  const features = [
-    ...(Array.isArray(pointThemeData?.features) ? pointThemeData.features : []),
-    ...(Array.isArray(geoJsonData?.features) ? geoJsonData.features : []),
-  ];
-
-  const seen = new Set<string>();
-  const nowIso = new Date().toISOString();
-  const conflicts: StoredConflict[] = [];
-
-  for (const feature of features) {
-    const props = feature.properties || {};
-    const coords = feature.geometry?.coordinates;
-    const lon = Array.isArray(coords) ? Number(coords[0]) : Number(props.lon);
-    const lat = Array.isArray(coords) ? Number(coords[1]) : Number(props.lat);
-    const mentions = Number(props.count || 0);
-    const rawName = String(props.name || '').trim();
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !rawName || mentions < 1) {
-      continue;
-    }
-
-    const roundedKey = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
-    if (seen.has(roundedKey)) continue;
-    seen.add(roundedKey);
-
-    const parsed = parseLocationName(rawName);
-    const severity = severityFromMentions(mentions);
-
-    conflicts.push({
-      event_id: crypto.randomUUID(),
-      event_date: nowIso,
-      event_type: 'Fegyveres konfliktus jelzés',
-      country: parsed.country,
-      location: parsed.location,
-      latitude: lat,
-      longitude: lon,
-      fatalities: 0,
-      description: `${mentions} friss hirhivatkozas alapjan aktiv konfliktus-esemeny a tersegben.`,
-      source: 'GDELT GEO',
-      severity,
-    });
-  }
-
-  return conflicts.slice(0, 220);
+  return filtered.slice(0, 15); // Return top 15 newest articles
 }
 
 async function analyzeArticleWithGroq(article: RawArticle, groqApiKey: string): Promise<AnalysisResult> {
@@ -375,7 +261,6 @@ Deno.serve(async (req) => {
 
   try {
     const latestNews = await fetchLatestNews(gnewsApiKey);
-    const geoConflicts = await fetchGeoConflictsFromGdelt();
     const validArticles = latestNews.filter((article) => article.url && article.title);
 
     const urls = validArticles.map((article) => article.url as string);
@@ -425,21 +310,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const allConflicts = [...newConflicts, ...geoConflicts];
-    if (allConflicts.length > 0) {
+    if (newConflicts.length > 0) {
       // Conflicts insertion is non-fatal if it fails (articles will still be logged as success)
-      const deduped: StoredConflict[] = [];
-      const seen = new Set<string>();
-      for (const conflict of allConflicts) {
-        const key = `${conflict.event_type.toLowerCase()}_${conflict.latitude.toFixed(2)}_${conflict.longitude.toFixed(2)}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        deduped.push(conflict);
-      }
-
       const { error: conflictError } = await supabase
         .from('conflicts')
-        .insert(deduped);
+        .insert(newConflicts);
 
       if (conflictError) {
         console.error('Confict insert error:', conflictError);
@@ -450,8 +325,7 @@ Deno.serve(async (req) => {
       fetched: latestNews.length,
       inserted: analyzedArticles.length,
       skipped: validArticles.length - newArticles.length,
-      conflictsInserted: newConflicts.length + geoConflicts.length,
-      geoConflictsInserted: geoConflicts.length,
+      conflictsInserted: newConflicts.length,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
