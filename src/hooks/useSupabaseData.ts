@@ -69,9 +69,13 @@ export function useMarketData() {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
+    // Only get the last 48 hours of data to avoid stale entries
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - 48);
     const { data } = await supabase
       .from('market_data')
       .select('*')
+      .gte('recorded_at', cutoff.toISOString())
       .order('recorded_at', { ascending: false });
     if (data) setMarketData(data);
     setLoading(false);

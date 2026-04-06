@@ -22,9 +22,12 @@ export default function Index() {
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
   const [chatArticle, setChatArticle] = useState<Article | null>(null);
 
+  // Only show symbols we actively track
+  const ACTIVE_SYMBOLS = ['EUR/HUF', 'USD/HUF', 'GBP/HUF', 'CHF/HUF', 'BTC', 'ETH', 'ARANY'];
   const symbols = useMemo(() => {
-    const unique = [...new Set(marketData.map((d) => d.symbol))];
-    return unique.length ? unique : ['EUR/HUF'];
+    const available = new Set(marketData.map((d) => d.symbol));
+    const active = ACTIVE_SYMBOLS.filter((s) => available.has(s));
+    return active.length ? active : ['EUR/HUF'];
   }, [marketData]);
 
   return (
