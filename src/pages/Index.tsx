@@ -11,11 +11,12 @@ import HungarianEconomyPanel from '@/components/HungarianEconomyPanel';
 import MediaLensPanel from '@/components/MediaLensPanel';
 import StatsBar from '@/components/StatsBar';
 import MarketTicker from '@/components/MarketTicker';
+import ConflictHistoryPanel from '@/components/ConflictHistoryPanel';
 import Navigation, { View } from '@/components/Navigation';
 
 export default function Index() {
   const { articles, loading: articlesLoading } = useArticles();
-  const { conflicts } = useConflicts();
+  const { liveConflicts, historyConflicts } = useConflicts();
   const { marketData } = useMarketData();
 
   const [view, setView] = useState<View>('globe');
@@ -29,6 +30,12 @@ export default function Index() {
     const active = ACTIVE_SYMBOLS.filter((s) => available.has(s));
     return active.length ? active : ['EUR/HUF'];
   }, [marketData]);
+
+  const displayedConflicts = useMemo(
+    () => (liveConflicts.length > 0 ? liveConflicts : historyConflicts.slice(0, 30)),
+    [liveConflicts, historyConflicts]
+  );
+  const usingHistoryFallback = liveConflicts.length === 0 && historyConflicts.length > 0;
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -51,7 +58,7 @@ export default function Index() {
           {view === 'markets' ? (
             <MarketTicker articles={articles} />
           ) : (
-            <StatsBar articles={articles} conflicts={conflicts} />
+            <StatsBar articles={articles} conflicts={liveConflicts} />
           )}
         </div>
       )}
@@ -66,9 +73,14 @@ export default function Index() {
             <section className="min-h-0 h-full order-1 xl:order-2">
               <div className="overflow-hidden relative h-[420px] sm:h-[520px] xl:h-full min-h-[420px] bg-[#111111] border-[3px] border-[#C8243C] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_0_1px_rgba(200,36,60,0.28)]">
                 <ConflictGlobe
-                  conflicts={conflicts}
+                  conflicts={displayedConflicts}
                   onSelectConflict={setSelectedConflict}
                 />
+                {usingHistoryFallback && (
+                  <div className="absolute left-3 top-3 z-20 text-[11px] uppercase tracking-[0.14em] bg-[#111111]/85 border border-[#D97B00] text-[#F2EDE4] px-2.5 py-1.5">
+                    Nincs friss (24h) konfliktus - archiv mutatva
+                  </div>
+                )}
                 {selectedConflict && (
                   <div className="absolute left-3 right-3 bottom-3 sm:left-auto sm:right-4 sm:top-4 sm:bottom-auto sm:w-80 sm:max-w-[calc(100%-2rem)] z-20">
                     <ConflictDetail
@@ -80,7 +92,8 @@ export default function Index() {
               </div>
             </section>
 
-            <section className="min-h-0 h-full order-3">
+            <section className="min-h-0 h-full order-3 grid grid-rows-[auto_1fr] gap-4 sm:gap-6">
+              <ConflictHistoryPanel conflicts={historyConflicts} onSelectConflict={setSelectedConflict} />
               <ChartPanel symbols={symbols} />
             </section>
           </div>
