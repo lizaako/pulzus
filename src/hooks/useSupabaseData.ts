@@ -46,7 +46,14 @@ export function useConflicts() {
           const key = `${d.country}-${d.location}`.toLowerCase();
           if (!seen.has(key)) {
             seen.add(key);
-            unique.push(d);
+            const normalizedType =
+              (d.event_type || '').toLowerCase().includes('hotspot')
+                ? 'Fegyveres konfliktus'
+                : d.event_type;
+            unique.push({
+              ...d,
+              event_type: normalizedType,
+            });
           }
         }
       }

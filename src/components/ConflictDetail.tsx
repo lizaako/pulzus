@@ -13,12 +13,16 @@ export default function ConflictDetail({ conflict, onClose }: ConflictDetailProp
     low: 'text-success border-success/50 bg-success/10',
   };
   const style = severityStyles[conflict.severity?.toLowerCase()] || severityStyles.low;
+  const displayEventType =
+    (conflict.event_type || '').toLowerCase().includes('hotspot')
+      ? 'Fegyveres konfliktus'
+      : conflict.event_type;
 
   return (
     <div className="glass-panel p-6 space-y-6 animate-fade-in-up">
       <div className="flex items-start justify-between">
         <h3 className="font-display text-xl font-extrabold text-foreground uppercase tracking-[0.08em]">
-          {conflict.event_type}
+          {displayEventType}
         </h3>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors uppercase tracking-[0.18em] text-[10px]">
           <X className="w-4 h-4" />
