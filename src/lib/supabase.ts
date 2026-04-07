@@ -32,6 +32,12 @@ export interface Conflict {
   source: string;
   event_date: string;
   fatalities: number;
+  article_count?: number;
+  report_count?: number;
+  activity_score?: number;
+  trend?: 'rising' | 'stable' | 'cooling';
+  summary?: string;
+  last_seen_at?: string;
 }
 
 export interface MarketData {

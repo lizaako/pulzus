@@ -4,6 +4,7 @@ import { Article, Conflict } from '@/lib/supabase';
 import ParticleBackground from '@/components/ParticleBackground';
 import ConflictGlobe from '@/components/ConflictGlobe';
 import ConflictDetail from '@/components/ConflictDetail';
+import ConflictOverviewPanel from '@/components/ConflictOverviewPanel';
 import NewsPanel from '@/components/NewsPanel';
 import NewsInsightChat from '@/components/NewsInsightChat';
 import ChartPanel from '@/components/ChartPanel';
@@ -81,7 +82,11 @@ export default function Index() {
             </section>
 
             <section className="min-h-0 h-full order-3">
-              <ChartPanel symbols={symbols} />
+              <ConflictOverviewPanel
+                conflicts={conflicts}
+                selectedConflict={selectedConflict}
+                onSelectConflict={setSelectedConflict}
+              />
             </section>
           </div>
         )}

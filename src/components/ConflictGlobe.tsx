@@ -50,6 +50,19 @@ function severityColor(severity: string): string {
   }
 }
 
+function conflictIntensity(conflict: Conflict): number {
+  const baseScore = conflict.activity_score || 0;
+  const articleScore = conflict.article_count || 0;
+  const reportScore = (conflict.report_count || 0) * 2;
+  const severityBoost = conflict.severity?.toLowerCase() === 'high'
+    ? 6
+    : conflict.severity?.toLowerCase() === 'medium'
+      ? 3
+      : 1;
+
+  return Math.max(1, baseScore + articleScore + reportScore + severityBoost);
+}
+
 const COUNTRY_NAME_MAP: Record<string, string> = {
   Ukrajna: 'Ukraine',
   Szudán: 'Sudan',
@@ -237,6 +250,11 @@ function ConflictMarker({ conflict, onSelect, onHoverCountry }: ConflictMarkerPr
   const lon = (conflict as any)._offsetLon ?? conflict.longitude;
   const pos = useMemo(() => latLonToVector3(lat, lon, 2.03), [lat, lon]);
   const color = useMemo(() => new THREE.Color(severityColor(conflict.severity)), [conflict.severity]);
+  const intensity = useMemo(() => conflictIntensity(conflict), [conflict]);
+  const dotRadius = 0.013 + Math.min(intensity / 260, 0.02);
+  const ringInner = dotRadius * 1.8;
+  const ringOuter = dotRadius * 2.6;
+  const beamHeight = 0.05 + Math.min(intensity / 250, 0.06);
   const [hovered, setHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Mesh>(null);
@@ -283,25 +301,25 @@ function ConflictMarker({ conflict, onSelect, onHoverCountry }: ConflictMarkerPr
     >
       {/* Core dot */}
       <mesh scale={hovered ? 1.6 : 1}>
-        <sphereGeometry args={[0.015, 16, 16]} />
+        <sphereGeometry args={[dotRadius, 16, 16]} />
         <meshBasicMaterial color={color} />
       </mesh>
 
       {/* Inner glow */}
       <mesh scale={hovered ? 2.2 : 1.5}>
-        <sphereGeometry args={[0.015, 16, 16]} />
+        <sphereGeometry args={[dotRadius, 16, 16]} />
         <meshBasicMaterial color={color} transparent opacity={0.3} />
       </mesh>
 
       {/* Pulsing ring */}
       <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.025, 0.035, 32]} />
+        <ringGeometry args={[ringInner, ringOuter, 32]} />
         <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Vertical beam / spike */}
-      <mesh ref={beamRef} position={[0, 0.04, 0]}>
-        <cylinderGeometry args={[0.002, 0.0005, 0.06, 8]} />
+      <mesh ref={beamRef} position={[0, beamHeight / 2 + 0.01, 0]}>
+        <cylinderGeometry args={[0.002, 0.0005, beamHeight, 8]} />
         <meshBasicMaterial color={color} transparent opacity={0.2} />
       </mesh>
     </group>

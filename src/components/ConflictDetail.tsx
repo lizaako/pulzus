@@ -1,5 +1,5 @@
 import { Conflict } from '@/lib/supabase';
-import { X, MapPin, AlertTriangle, Calendar, Users } from 'lucide-react';
+import { X, MapPin, AlertTriangle, Calendar, Users, Clock3, Newspaper } from 'lucide-react';
 
 interface ConflictDetailProps {
   conflict: Conflict;
@@ -45,15 +45,31 @@ export default function ConflictDetail({ conflict, onClose }: ConflictDetailProp
           <Calendar className="w-3.5 h-3.5 text-primary" />
           <span>{new Date(conflict.event_date).toLocaleDateString()}</span>
         </div>
+        {conflict.last_seen_at && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock3 className="w-3.5 h-3.5 text-primary" />
+            <span>Utolsó jel: {new Date(conflict.last_seen_at).toLocaleString('hu-HU')}</span>
+          </div>
+        )}
         {conflict.fatalities > 0 && (
           <div className="flex items-center gap-2 text-destructive">
             <Users className="w-3.5 h-3.5" />
             <span>{conflict.fatalities} áldozat</span>
           </div>
         )}
+        {((conflict.article_count || 0) > 0 || (conflict.report_count || 0) > 0) && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Newspaper className="w-3.5 h-3.5 text-primary" />
+            <span>
+              {conflict.article_count || 0} GDELT jel • {conflict.report_count || 0} ReliefWeb riport
+            </span>
+          </div>
+        )}
       </div>
 
-      <p className="text-[15px] text-muted-foreground leading-[1.6]">{conflict.description}</p>
+      <p className="text-[15px] text-muted-foreground leading-[1.6]">
+        {conflict.summary || conflict.description}
+      </p>
 
       <div className="text-xs text-muted-foreground/60">
         Forrás: {conflict.source}
