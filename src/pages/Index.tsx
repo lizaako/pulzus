@@ -15,7 +15,7 @@ import RealityCheckPanel from '@/components/RealityCheckPanel';
 import StatsBar from '@/components/StatsBar';
 import MarketTicker from '@/components/MarketTicker';
 import Navigation, { View } from '@/components/Navigation';
-import PdfSummaryPanel from '@/components/PdfSummaryPanel';
+import ExportPdfButton from '@/components/ExportPdfButton';
 import { Button } from '@/components/ui/button';
 
 export default function Index() {
@@ -43,6 +43,7 @@ export default function Index() {
             <Button asChild variant="outline" className="rounded-none border-[#333333] bg-transparent px-3 text-[10px] uppercase tracking-[0.18em] text-[#F2EDE4] hover:bg-[#171717] hover:text-[#F2EDE4] sm:text-[11px]">
               <Link to="/pricing">Árazás</Link>
             </Button>
+            <ExportPdfButton articles={articles} conflicts={effectiveConflicts} marketData={marketData} />
             <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#F2EDE4]/72 sm:text-right">
               {new Date().toLocaleString('hu-HU')}
             </div>
@@ -61,13 +62,6 @@ export default function Index() {
       )}
 
       <main className="relative z-10 px-4 py-6 sm:px-6 sm:py-10 lg:py-12">
-        <div className="mb-6 sm:mb-8">
-          <PdfSummaryPanel
-            articles={articles}
-            conflicts={effectiveConflicts}
-            marketData={marketData}
-          />
-        </div>
 
         {view === 'globe' && (
           <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)_340px] 2xl:grid-cols-[400px_minmax(0,1fr)_380px] gap-4 sm:gap-6 xl:h-[calc(100vh-208px)]">
