@@ -3,30 +3,90 @@ import { supabase, Article, Conflict, MarketData } from '@/lib/supabase';
 
 const CONFLICT_LOOKBACK_DAYS = 3;
 const MAX_VISIBLE_CONFLICTS = 30;
-const PLACEHOLDER_CONFLICT_DESCRIPTION = 'Forras atmenetileg limitelt (429), ideiglenes hotspot megjelenites.';
-const PLACEHOLDER_CONFLICT_SOURCE = 'fallback seed';
+const NEWS_RELEVANCE_KEYWORDS = [
+  'war', 'conflict', 'attack', 'strike', 'shelling', 'offensive', 'ceasefire', 'military', 'drone',
+  'háború', 'konfliktus', 'támadás', 'csapás', 'bombázás', 'tűzszünet', 'katonai', 'front',
+  'politics', 'political', 'government', 'election', 'parliament', 'diplomacy', 'sanction', 'policy', 'geopolitics',
+  'politika', 'kormány', 'választás', 'parlament', 'diplomácia', 'szankció', 'geopolitika',
+  'market', 'markets', 'economy', 'economic', 'inflation', 'interest rate', 'oil', 'gas', 'trade', 'tariff', 'stock', 'forex',
+  'piac', 'piacok', 'gazdaság', 'infláció', 'kamat', 'olaj', 'gáz', 'kereskedelem', 'vám', 'részvény', 'deviza',
+];
+
+function normalizeForMatching(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function topicList(topics: Article['topics']): string[] {
+  if (!topics) return [];
+  if (Array.isArray(topics)) return topics;
+  return String(topics)
+    .split(',')
+    .map((topic) => topic.trim())
+    .filter(Boolean);
+}
+
+function isRelevantNewsArticle(article: Article): boolean {
+  const haystack = normalizeForMatching([
+    article.title || '',
+    article.summary || '',
+    article.source || '',
+    article.hungary_impact || '',
+    topicList(article.topics).join(' '),
+  ].join(' '));
+
+  return NEWS_RELEVANCE_KEYWORDS.some((keyword) => haystack.includes(normalizeForMatching(keyword)));
+}
 
 function isValidCoordinate(value: number, min: number, max: number) {
   return Number.isFinite(value) && value >= min && value <= max;
 }
 
-function isPlaceholderConflict(conflict: Conflict) {
-  const description = conflict.description?.trim().toLowerCase() || '';
-  const source = conflict.source?.trim().toLowerCase() || '';
-
-  return description === PLACEHOLDER_CONFLICT_DESCRIPTION.toLowerCase()
-    || source === PLACEHOLDER_CONFLICT_SOURCE;
-}
-
 function hasUsableConflictContent(conflict: Conflict) {
-  if (isPlaceholderConflict(conflict)) return false;
-
   return Boolean(conflict.country?.trim())
     && Boolean(conflict.location?.trim())
     && Boolean(conflict.event_type?.trim())
     && Boolean(conflict.description?.trim())
     && isValidCoordinate(conflict.latitude, -90, 90)
     && isValidCoordinate(conflict.longitude, -180, 180);
+}
+
+function mapArticleToConflict(article: Article): Conflict | null {
+  const latitude = article.conflict_latitude;
+  const longitude = article.conflict_longitude;
+
+  if (!isValidCoordinate(latitude ?? NaN, -90, 90) || !isValidCoordinate(longitude ?? NaN, -180, 180)) {
+    return null;
+  }
+
+  const severity = article.conflict_severity || article.warning_level || 'medium';
+  const keywordScore = Array.isArray(article.topics) ? article.topics.length : 0;
+
+  return {
+    event_id: `article-${article.id}`,
+    event_type: article.conflict_event_type || 'Fegyveres konfliktus',
+    country: article.conflict_country || 'Ismeretlen',
+    location: article.conflict_location || article.conflict_country || 'Ismeretlen helyszin',
+    latitude,
+    longitude,
+    description: article.conflict_description || article.summary,
+    summary: article.conflict_description || article.summary,
+    severity,
+    source: article.source,
+    event_date: article.published_at,
+    fatalities: article.conflict_fatalities || 0,
+    article_count: 1,
+    report_count: 0,
+    activity_score:
+      (severity === 'high' ? 18 : severity === 'medium' ? 12 : 8)
+      + keywordScore
+      + (article.affects_hungary ? 2 : 0),
+    trend: 'rising',
+    last_seen_at: article.published_at,
+    article_url: article.url,
+  };
 }
 
 function conflictQualityScore(conflict: Conflict) {
@@ -65,8 +125,8 @@ export function useArticles() {
       .from('articles')
       .select('*')
       .order('published_at', { ascending: false })
-      .limit(50);
-    if (data) setArticles(data);
+      .limit(180);
+    if (data) setArticles(data.filter(isRelevantNewsArticle));
     setLoading(false);
   }, []);
 
@@ -84,31 +144,24 @@ export function useConflicts() {
   const [loading, setLoading] = useState(true);
 
   const fetchConflicts = useCallback(async () => {
-    const zoneQuery = await supabase
-      .from('active_conflict_zones')
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - CONFLICT_LOOKBACK_DAYS);
+
+    const { data = [] } = await supabase
+      .from('articles')
       .select('*')
-      .order('activity_score', { ascending: false })
-      .order('last_seen_at', { ascending: false })
-      .limit(60);
-
-    const fallbackQuery = !zoneQuery.data?.length
-      ? await supabase
-          .from('conflicts')
-          .select('*')
-          .order('event_date', { ascending: false })
-          .limit(100)
-      : null;
-
-    const data = zoneQuery.data?.length ? zoneQuery.data : (fallbackQuery?.data || []);
+      .gte('published_at', cutoff.toISOString())
+      .not('conflict_latitude', 'is', null)
+      .not('conflict_longitude', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(100);
 
     if (data.length > 0) {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - CONFLICT_LOOKBACK_DAYS);
-
       const bestByLocation = new Map<string, Conflict>();
 
-      for (const conflict of data) {
-        if (new Date(conflict.event_date) <= cutoff) continue;
+      for (const article of data) {
+        const conflict = mapArticleToConflict(article);
+        if (!conflict) continue;
         if (!hasUsableConflictContent(conflict)) continue;
 
         const normalizedConflict: Conflict = {

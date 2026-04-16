@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Article } from '@/lib/supabase';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { localizeHungaryImpact } from '@/lib/article-localization';
 import { translateHungaryImpactText } from '@/lib/news-chat';
+import { ExternalLink, Search, SendHorizontal } from 'lucide-react';
 
 interface NewsPanelProps {
   articles: Article[];
@@ -42,6 +45,26 @@ function warningBadge(level: string) {
 
 export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelProps) {
   const [translatedImpacts, setTranslatedImpacts] = useState<Record<string, string>>({});
+  const [keyword, setKeyword] = useState('');
+
+  const filteredArticles = useMemo(() => {
+    const query = keyword.trim().toLowerCase();
+    if (!query) return articles;
+
+    return articles.filter((article) => {
+      const haystack = [
+        article.title,
+        article.summary,
+        article.source,
+        article.hungary_impact,
+        Array.isArray(article.topics) ? article.topics.join(' ') : article.topics,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [articles, keyword]);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,10 +108,19 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
     <div className="glass-panel h-full flex flex-col">
       <div className="p-6 border-b border-border">
         <h2 className="font-display text-2xl font-extrabold text-foreground tracking-[-0.02em]">Hírfolyam</h2>
+        <div className="relative mt-4">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder="Kulcsszó keresése"
+            className="h-10 rounded-none border-border bg-secondary pl-10"
+          />
+        </div>
       </div>
       <ScrollArea className="flex-1 p-6">
         <div className="space-y-4">
-          {articles.map((article) => (
+          {filteredArticles.map((article) => (
             <div
               key={article.id}
               className="bg-card border border-border p-6 space-y-4"
@@ -108,8 +140,16 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-[16px] font-semibold text-foreground leading-tight flex-1 font-display">{article.title}</h3>
                 {article.url && (
-                  <a href={article.url} target="_blank" rel="noreferrer" className="text-[11px] uppercase tracking-[0.2em] text-accent hover:text-[#A01E30] shrink-0">
-                    Megnyitás
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Eredeti cikk megnyitasa"
+                    title="Eredeti cikk megnyitasa"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-border/70 bg-background/60 text-accent transition-colors hover:border-primary/45 hover:text-[#A01E30]"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <ExternalLink className="h-4 w-4" />
                   </a>
                 )}
               </div>
@@ -126,6 +166,20 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
 
               <p className="text-[14px] text-muted-foreground line-clamp-3">{article.summary}</p>
 
+              {article.manipulation_tags && article.manipulation_tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {article.manipulation_tags.map((tag) => (
+                    <Badge
+                      key={`${article.id}-${tag}`}
+                      variant="outline"
+                      className="rounded-none border-border/80 bg-secondary/70 px-2 py-1 text-[10px] font-medium normal-case tracking-[0.04em] text-muted-foreground"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-mono ${sentimentColor(article.sentiment_score)}`}>
                   {article.sentiment_score?.toFixed(2)}
@@ -139,10 +193,12 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="h-9 px-4 text-[10px]"
+                    className="h-9 w-9 p-0"
+                    aria-label="Hírelemző megnyitása"
+                    title="Hírelemző"
                     onClick={() => onOpenChat(article)}
                   >
-                    Kérdezd az AI-t
+                    <SendHorizontal className="h-4 w-4" />
                   </Button>
                 )}
               </div>
@@ -157,6 +213,12 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
               )}
             </div>
           ))}
+
+          {filteredArticles.length === 0 && (
+            <div className="border border-dashed border-border p-6 text-sm text-muted-foreground">
+              Nincs találat a megadott kulcsszóra.
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>

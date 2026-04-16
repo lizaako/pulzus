@@ -1,10 +1,9 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Article } from '@/lib/supabase';
-import { NewsChatMessage, NEWS_CHAT_SUGGESTIONS, requestNewsChatAnswer } from '@/lib/news-chat';
+import { NewsChatMessage, requestNewsChatAnswer } from '@/lib/news-chat';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -12,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, SendHorizontal } from 'lucide-react';
 
 interface NewsInsightChatProps {
   article: Article | null;
@@ -23,7 +22,7 @@ interface NewsInsightChatProps {
 function createIntroMessage(article: Article): NewsChatMessage {
   return {
     role: 'assistant',
-    content: `Kérdezz bármit erről a hírről: "${String(article.title || 'ez a hír')}". Már most tudok dolgozni az összefoglalóval, a figyelmeztetési szinttel, a hangulattal és a témacímkékkel, backend AI végponttal pedig még mélyebb elemzést adok.`,
+    content: `Kérdezz bármit erről a hírről: "${String(article.title || 'ez a hír')}".`,
   };
 }
 
@@ -100,9 +99,6 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                 <DialogTitle className="font-display text-2xl font-extrabold tracking-[-0.02em] text-foreground">
                   Hírelemző chat
                 </DialogTitle>
-                <DialogDescription className="text-[15px] leading-[1.6]">
-                  Merülj el egy konkrét hírben anélkül, hogy kilépnél a vezérlőpultról.
-                </DialogDescription>
               </DialogHeader>
 
               <div className="mt-5 space-y-4">
@@ -150,38 +146,10 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                   </div>
                 )}
 
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Próbáld megkérdezni
-                  </p>
-                  <div className="mt-2 flex flex-col gap-2">
-                    {NEWS_CHAT_SUGGESTIONS.map((suggestion) => (
-                      <Button
-                        key={suggestion}
-                        type="button"
-                        variant="outline"
-                        className="justify-start whitespace-normal text-left text-xs"
-                        onClick={() => void submitQuestion(suggestion)}
-                        disabled={isSending}
-                      >
-                        {suggestion}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
               </div>
             </aside>
 
             <section className="flex min-h-[560px] flex-col">
-              <div className="border-b border-border px-6 py-5">
-                <div className="text-sm font-display font-bold uppercase tracking-[0.18em] text-foreground">
-                  Hírsegéd
-                </div>
-                <p className="mt-2 text-[14px] text-muted-foreground">
-                  A legjobb eredményt backendhez kötött Groq végponttal adja. Addig az alkalmazásban már betöltött cikkadatokkal dolgozik.
-                </p>
-              </div>
-
               <ScrollArea className="flex-1 px-5 py-4">
                 <div className="space-y-4">
                   {messages.map((message, index) => (
@@ -219,19 +187,18 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     onKeyDown={(event) => void handleKeyDown(event)}
-                    placeholder="Kérdezz a háttérről, következményekről, megbízhatóságról, magyar hatásról vagy arról, mi jöhet ezután..."
+                    placeholder="Írd ide a kérdést..."
                     className="min-h-[96px] resize-none border-0 bg-transparent px-0 py-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="text-[11px] text-muted-foreground">
-                      Az Enter elküldi a kérdést. A Shift+Enter új sort kezd.
-                    </p>
+                  <div className="mt-3 flex items-center justify-end gap-3">
                     <Button
                       type="submit"
-                      className="gap-2"
+                      className="h-9 w-9 p-0"
                       disabled={isSending || !draft.trim()}
+                      aria-label="Küldés"
+                      title="Küldés"
                     >
-                      Kérdezd az AI-t
+                      <SendHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

@@ -13,6 +13,15 @@ jobs:
     steps:
       - name: Trigger news-ingest Supabase Edge Function
         run: |
-          curl -f -sS -X POST "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/news-ingest" \
+          response_file="$(mktemp)"
+          status_code="$(curl -sS -o "$response_file" -w "%{http_code}" -X POST "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/news-ingest" \
             -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json")"
+
+          cat "$response_file"
+          echo
+
+          if [ "$status_code" -ge 400 ]; then
+            echo "news-ingest failed with HTTP $status_code"
+            exit 1
+          fi

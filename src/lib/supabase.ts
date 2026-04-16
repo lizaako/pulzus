@@ -18,6 +18,15 @@ export interface Article {
   hungary_impact: string;
   warning_level: string;
   summary: string;
+  manipulation_tags?: string[] | null;
+  conflict_event_type?: string | null;
+  conflict_country?: string | null;
+  conflict_location?: string | null;
+  conflict_latitude?: number | null;
+  conflict_longitude?: number | null;
+  conflict_fatalities?: number | null;
+  conflict_description?: string | null;
+  conflict_severity?: string | null;
 }
 
 export interface Conflict {
@@ -38,6 +47,7 @@ export interface Conflict {
   trend?: 'rising' | 'stable' | 'cooling';
   summary?: string;
   last_seen_at?: string;
+  article_url?: string;
 }
 
 export interface MarketData {

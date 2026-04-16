@@ -24,6 +24,18 @@ function serializeError(error: unknown) {
   return { message: String(error) };
 }
 
+interface QuoteResult {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  currency: string;
+}
+
+interface ProviderDiagnostics {
+  errors: string[];
+}
+
 // Fetch EUR/HUF from Frankfurter API (100% free, no key needed)
 async function fetchEurHuf(): Promise<{ price: number; change: number } | null> {
   try {
@@ -150,12 +162,27 @@ async function fetchChfHuf(): Promise<{ price: number; change: number } | null> 
 }
 
 // Fetch crypto & gold from CoinGecko (100% free, no key needed)
-async function fetchCoinGeckoData(): Promise<{ symbol: string; name: string; price: number; change: number; currency: string }[]> {
+async function fetchCoinGeckoData(diagnostics: ProviderDiagnostics): Promise<{ symbol: string; name: string; price: number; change: number; currency: string }[]> {
   try {
-    const ids = 'bitcoin,ethereum,paxos-gold';
+    const ids = [
+      'bitcoin',
+      'ethereum',
+      'solana',
+      'ripple',
+      'binancecoin',
+      'dogecoin',
+      'cardano',
+      'tron',
+      'chainlink',
+      'paxos-gold',
+    ].join(',');
     const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
     const response = await fetch(url);
-    if (!response.ok) return [];
+    if (!response.ok) {
+      const body = await response.text();
+      diagnostics.errors.push(`CoinGecko HTTP ${response.status}: ${body.slice(0, 200)}`);
+      return [];
+    }
     const data = await response.json();
 
     const results: { symbol: string; name: string; price: number; change: number; currency: string }[] = [];
@@ -178,6 +205,69 @@ async function fetchCoinGeckoData(): Promise<{ symbol: string; name: string; pri
         currency: 'USD',
       });
     }
+    if (data?.solana) {
+      results.push({
+        symbol: 'SOL',
+        name: 'Solana',
+        price: data.solana.usd,
+        change: Math.round((data.solana.usd_24h_change || 0) * 100) / 100,
+        currency: 'USD',
+      });
+    }
+    if (data?.ripple) {
+      results.push({
+        symbol: 'XRP',
+        name: 'XRP',
+        price: data.ripple.usd,
+        change: Math.round((data.ripple.usd_24h_change || 0) * 100) / 100,
+        currency: 'USD',
+      });
+    }
+    if (data?.binancecoin) {
+      results.push({
+        symbol: 'BNB',
+        name: 'BNB',
+        price: data.binancecoin.usd,
+        change: Math.round((data.binancecoin.usd_24h_change || 0) * 100) / 100,
+        currency: 'USD',
+      });
+    }
+    if (data?.dogecoin) {
+      results.push({
+        symbol: 'DOGE',
+        name: 'Dogecoin',
+        price: data.dogecoin.usd,
+        change: Math.round((data.dogecoin.usd_24h_change || 0) * 100) / 100,
+        currency: 'USD',
+      });
+    }
+    if (data?.cardano) {
+      results.push({
+        symbol: 'ADA',
+        name: 'Cardano',
+        price: data.cardano.usd,
+        change: Math.round((data.cardano.usd_24h_change || 0) * 100) / 100,
+        currency: 'USD',
+      });
+    }
+    if (data?.tron) {
+      results.push({
+        symbol: 'TRX',
+        name: 'TRON',
+        price: data.tron.usd,
+        change: Math.round((data.tron.usd_24h_change || 0) * 100) / 100,
+        currency: 'USD',
+      });
+    }
+    if (data?.chainlink) {
+      results.push({
+        symbol: 'LINK',
+        name: 'Chainlink',
+        price: data.chainlink.usd,
+        change: Math.round((data.chainlink.usd_24h_change || 0) * 100) / 100,
+        currency: 'USD',
+      });
+    }
     if (data?.['paxos-gold']) {
       results.push({
         symbol: 'ARANY',
@@ -189,7 +279,53 @@ async function fetchCoinGeckoData(): Promise<{ symbol: string; name: string; pri
     }
 
     return results;
-  } catch {
+  } catch (error) {
+    diagnostics.errors.push(`CoinGecko exception: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+
+async function fetchYahooQuotes(
+  symbols: string[],
+  labels: Record<string, string>,
+  diagnostics: ProviderDiagnostics,
+): Promise<QuoteResult[]> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(','))}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+      },
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      diagnostics.errors.push(`Yahoo HTTP ${response.status}: ${body.slice(0, 200)}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const results = Array.isArray(data?.quoteResponse?.result) ? data.quoteResponse.result : [];
+
+    return results
+      .map((item) => {
+        const symbol = typeof item?.symbol === 'string' ? item.symbol : null;
+        const price = typeof item?.regularMarketPrice === 'number' ? item.regularMarketPrice : null;
+        const change = typeof item?.regularMarketChangePercent === 'number' ? item.regularMarketChangePercent : null;
+
+        if (!symbol || price === null || change === null) return null;
+
+        return {
+          symbol,
+          name: labels[symbol] || item?.shortName || item?.longName || symbol,
+          price,
+          change: Math.round(change * 100) / 100,
+          currency: typeof item?.currency === 'string' ? item.currency : 'USD',
+        };
+      })
+      .filter((item): item is QuoteResult => item !== null);
+  } catch (error) {
+    diagnostics.errors.push(`Yahoo exception: ${error instanceof Error ? error.message : String(error)}`);
     return [];
   }
 }
@@ -266,13 +402,41 @@ Deno.serve(async (req) => {
   });
 
   try {
+    const diagnostics: ProviderDiagnostics = { errors: [] };
+    const yahooLabels: Record<string, string> = {
+      '^GSPC': 'S&P 500',
+      '^IXIC': 'NASDAQ',
+      '^DJI': 'Dow Jones',
+      '^GDAXI': 'DAX',
+      '^FTSE': 'FTSE 100',
+      '^N225': 'Nikkei 225',
+      AAPL: 'Apple',
+      MSFT: 'Microsoft',
+      NVDA: 'NVIDIA',
+      AMZN: 'Amazon',
+      GOOGL: 'Alphabet',
+      META: 'Meta',
+      TSLA: 'Tesla',
+      'BRK-B': 'Berkshire Hathaway',
+      JPM: 'JPMorgan Chase',
+      V: 'Visa',
+      WMT: 'Walmart',
+      XOM: 'Exxon Mobil',
+      LLY: 'Eli Lilly',
+      AVGO: 'Broadcom',
+      ORCL: 'Oracle',
+    };
+
+    const yahooSymbols = Object.keys(yahooLabels);
+
     // Fetch all data sources in parallel
-    const [eurHuf, usdHuf, gbpHuf, chfHuf, cryptoData] = await Promise.all([
+    const [eurHuf, usdHuf, gbpHuf, chfHuf, cryptoData, yahooQuotes] = await Promise.all([
       fetchEurHuf(),
       fetchUsdHuf(),
       fetchGbpHuf(),
       fetchChfHuf(),
-      fetchCoinGeckoData(),
+      fetchCoinGeckoData(diagnostics),
+      fetchYahooQuotes(yahooSymbols, yahooLabels, diagnostics),
     ]);
 
     const now = new Date().toISOString();
@@ -286,6 +450,17 @@ Deno.serve(async (req) => {
 
     // Crypto & Gold
     rawEntries.push(...cryptoData);
+
+    // Indexes & top stocks
+    rawEntries.push(
+      ...yahooQuotes.map((entry) => ({
+        symbol: entry.symbol,
+        name: entry.name,
+        price: entry.price,
+        change: entry.change,
+        currency: entry.currency,
+      })),
+    );
 
     if (rawEntries.length === 0) {
       throw new Error('No market data could be fetched');
@@ -320,6 +495,12 @@ Deno.serve(async (req) => {
       success: true,
       inserted: entries.length,
       symbols: entries.map((e) => e.symbol),
+      provider_counts: {
+        fx: [eurHuf, usdHuf, gbpHuf, chfHuf].filter(Boolean).length,
+        crypto: cryptoData.length,
+        yahoo: yahooQuotes.length,
+      },
+      diagnostics,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

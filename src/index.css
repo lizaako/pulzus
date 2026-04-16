@@ -6,23 +6,23 @@
 
 @layer base {
   :root {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 94%;
+    --background: 0 0% 6%;
+    --foreground: 35 22% 92%;
 
-    --card: 0 0% 11%;
-    --card-foreground: 0 0% 94%;
+    --card: 0 0% 6%;
+    --card-foreground: 35 22% 92%;
 
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 94%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 35 22% 92%;
 
-    --primary: 0 0% 94%;
+    --primary: 35 22% 92%;
     --primary-foreground: 0 0% 8%;
 
-    --secondary: 0 0% 13%;
-    --secondary-foreground: 0 0% 94%;
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 35 22% 92%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 35 10% 62%;
 
     --accent: 352 68% 46%;
     --accent-foreground: 35 25% 92%;
@@ -36,13 +36,13 @@
     --success: 143 47% 34%;
     --success-foreground: 35 25% 92%;
 
-    --border: 0 0% 22%;
-    --input: 0 0% 22%;
+    --border: 352 46% 24%;
+    --input: 352 28% 18%;
     --ring: 352 68% 46%;
 
-    --radius: 8px;
+    --radius: 2px;
 
-    --sidebar-background: 0 0% 7%;
+    --sidebar-background: 0 0% 6%;
     --sidebar-foreground: 35 25% 92%;
     --sidebar-primary: 352 68% 46%;
     --sidebar-primary-foreground: 35 25% 92%;
@@ -58,7 +58,7 @@
   }
 
   html {
-    background: #0f0f0f;
+    background: #101010;
   }
 
   body {
@@ -66,7 +66,7 @@
     font-family: 'DM Sans', sans-serif;
     font-size: 15px;
     line-height: 1.6;
-    background: #0f0f0f;
+    background: #101010;
   }
 
   h1, h2, h3, h4, h5, h6,
@@ -83,7 +83,10 @@
 @layer components {
   .glass-panel {
     @apply bg-card border border-border;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    background: #101010;
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.22),
+      0 0 0 1px rgba(123,30,41,0.16);
   }
 
   .glow-border {
@@ -97,6 +100,7 @@
 
   .neon-line {
     @apply h-px w-full bg-border;
+    box-shadow: 0 0 10px rgba(123, 30, 41, 0.22);
   }
 
   .pulse-dot {
@@ -167,13 +171,13 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #EDE8DF;
+  background: #111112;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D6D0C7;
+  background: #5d1e28;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5C5750;
+  background: #7b1e29;
 }

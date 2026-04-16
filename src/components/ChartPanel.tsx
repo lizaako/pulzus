@@ -1,156 +1,228 @@
 import { useMemo } from 'react';
-import { useMarketHistory } from '@/hooks/useSupabaseData';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { BarChart3, ChevronDown, ChevronUp, TrendingDown, TrendingUp } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MarketData } from '@/lib/supabase';
 
 interface ChartPanelProps {
-  symbols: string[];
+  marketData: MarketData[];
 }
 
-const chartConfig: ChartConfig = {
-  price: {
-    label: 'Ár',
-    color: '#C8243C',
-  },
+type MarketSectionId = 'fx' | 'crypto' | 'commodities';
+type ExtendedMarketSectionId = MarketSectionId | 'indexes' | 'stocks';
+
+interface MarketRowMeta {
+  code: string;
+  section: ExtendedMarketSectionId;
+  label: string;
+}
+
+const MARKET_ROW_META: Record<string, MarketRowMeta> = {
+  '^GSPC': { code: 'US', section: 'indexes', label: 'S&P 500' },
+  '^IXIC': { code: 'US', section: 'indexes', label: 'NASDAQ' },
+  '^DJI': { code: 'US', section: 'indexes', label: 'Dow Jones' },
+  '^GDAXI': { code: 'EU', section: 'indexes', label: 'DAX' },
+  '^FTSE': { code: 'UK', section: 'indexes', label: 'FTSE 100' },
+  '^N225': { code: 'JP', section: 'indexes', label: 'Nikkei 225' },
+  'EUR/HUF': { code: 'FX', section: 'fx', label: 'EUR/HUF' },
+  'USD/HUF': { code: 'FX', section: 'fx', label: 'USD/HUF' },
+  'GBP/HUF': { code: 'FX', section: 'fx', label: 'GBP/HUF' },
+  'CHF/HUF': { code: 'FX', section: 'fx', label: 'CHF/HUF' },
+  AAPL: { code: 'US', section: 'stocks', label: 'Apple' },
+  MSFT: { code: 'US', section: 'stocks', label: 'Microsoft' },
+  NVDA: { code: 'US', section: 'stocks', label: 'NVIDIA' },
+  AMZN: { code: 'US', section: 'stocks', label: 'Amazon' },
+  GOOGL: { code: 'US', section: 'stocks', label: 'Alphabet' },
+  META: { code: 'US', section: 'stocks', label: 'Meta' },
+  TSLA: { code: 'US', section: 'stocks', label: 'Tesla' },
+  'BRK-B': { code: 'US', section: 'stocks', label: 'Berkshire Hathaway' },
+  JPM: { code: 'US', section: 'stocks', label: 'JPMorgan Chase' },
+  V: { code: 'US', section: 'stocks', label: 'Visa' },
+  WMT: { code: 'US', section: 'stocks', label: 'Walmart' },
+  XOM: { code: 'US', section: 'stocks', label: 'Exxon Mobil' },
+  LLY: { code: 'US', section: 'stocks', label: 'Eli Lilly' },
+  AVGO: { code: 'US', section: 'stocks', label: 'Broadcom' },
+  ORCL: { code: 'US', section: 'stocks', label: 'Oracle' },
+  BTC: { code: 'CR', section: 'crypto', label: 'Bitcoin' },
+  ETH: { code: 'CR', section: 'crypto', label: 'Ethereum' },
+  SOL: { code: 'CR', section: 'crypto', label: 'Solana' },
+  XRP: { code: 'CR', section: 'crypto', label: 'XRP' },
+  BNB: { code: 'CR', section: 'crypto', label: 'BNB' },
+  DOGE: { code: 'CR', section: 'crypto', label: 'Dogecoin' },
+  ADA: { code: 'CR', section: 'crypto', label: 'Cardano' },
+  TRX: { code: 'CR', section: 'crypto', label: 'TRON' },
+  LINK: { code: 'CR', section: 'crypto', label: 'Chainlink' },
+  ARANY: { code: 'CM', section: 'commodities', label: 'Arany' },
 };
 
-function createSyntheticHistoryPoint(base: MarketData, daysAgo: number, price: number): MarketData {
-  const recordedAt = new Date(base.recorded_at);
-  recordedAt.setDate(recordedAt.getDate() - daysAgo);
+const SECTION_META: Record<ExtendedMarketSectionId, { title: string }> = {
+  indexes: { title: 'Indexek' },
+  stocks: { title: 'Részvények' },
+  fx: { title: 'Devizák' },
+  crypto: { title: 'Kripto' },
+  commodities: { title: 'Árupiacok' },
+};
 
-  return {
-    ...base,
-    price,
-    recorded_at: recordedAt.toISOString(),
-  };
-}
-
-function buildDisplayHistory(history: MarketData[], symbol: string): { data: MarketData[]; synthetic: boolean } {
-  if (history.length >= 2) {
-    return { data: history, synthetic: false };
-  }
-
-  if (history.length === 0) {
-    return { data: [], synthetic: false };
-  }
-
-  const base = history[0];
-  const points: MarketData[] = [];
-  const seed = symbol.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const totalPoints = 14;
-
-  for (let index = 0; index < totalPoints; index += 1) {
-    const progress = index / (totalPoints - 1);
-    const wave = Math.sin((progress * Math.PI * 2) + seed * 0.1) * 0.012;
-    const drift = (progress - 0.5) * 0.018;
-    const multiplier = 1 + wave + drift;
-    const rawPrice = base.price * multiplier;
-    const price = Number(rawPrice.toFixed(2));
-    const daysAgo = totalPoints - 1 - index;
-    points.push(createSyntheticHistoryPoint(base, daysAgo, price));
-  }
-
-  points[points.length - 1] = {
-    ...base,
-    price: Number(base.price.toFixed(2)),
-  };
-
-  return { data: points, synthetic: true };
-}
-
-function SymbolChart({ symbol }: { symbol: string }) {
-  const { history, loading } = useMarketHistory(symbol);
-  const { data: displayHistory } = useMemo(() => buildDisplayHistory(history, symbol), [history, symbol]);
-
-  const chartData = useMemo(
-    () =>
-      displayHistory.map((d) => ({
-        date: new Date(d.recorded_at).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' }),
-        price: d.price,
-      })),
-    [displayHistory]
-  );
-
-  const latestPrice = displayHistory.length ? displayHistory[displayHistory.length - 1].price : null;
-  const firstPrice = displayHistory.length ? displayHistory[0].price : null;
-  const changePct =
-    latestPrice && firstPrice ? (((latestPrice - firstPrice) / firstPrice) * 100).toFixed(2) : null;
-  const isPositive = changePct ? parseFloat(changePct) >= 0 : true;
-
-  return (
-    <div className="p-4 sm:p-6 bg-card border border-border space-y-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[14px] font-display font-bold text-foreground">{symbol}</span>
-        </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {latestPrice != null && (
-            <span className="text-xs font-mono text-foreground">
-              {latestPrice.toLocaleString('hu-HU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          )}
-          {changePct && (
-            <span className={`text-[10px] font-mono ${isPositive ? 'text-success' : 'text-destructive'}`}>
-              {isPositive ? '+' : ''}{changePct}%
-            </span>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="h-28 flex items-center justify-center">
-          <div className="animate-pulse-glow text-primary font-display text-[10px]">BETÖLTÉS...</div>
-        </div>
-      ) : chartData.length === 0 ? (
-        <div className="h-28 flex items-center justify-center text-muted-foreground text-[10px]">
-          Nincs adat
-        </div>
-      ) : (
-        <ChartContainer config={chartConfig} className="h-28 w-full">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="0" stroke="#D6D0C7" />
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#5C5750' }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 9, fill: '#5C5750' }} domain={['auto', 'auto']} width={45} />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Line
-              type="monotone"
-              dataKey="price"
-              stroke="#C8243C"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 3 }}
-            />
-          </LineChart>
-        </ChartContainer>
-      )}
-
-      <div className="flex items-center justify-between gap-2 text-[9px] text-muted-foreground tracking-wider">
-        <span>1 HÓNAPOS NÉZET</span>
-      </div>
-    </div>
+function getLatestBySymbol(marketData: MarketData[]) {
+  return Object.values(
+    marketData.reduce<Record<string, MarketData>>((acc, entry) => {
+      if (!acc[entry.symbol] || new Date(entry.recorded_at) > new Date(acc[entry.symbol].recorded_at)) {
+        acc[entry.symbol] = entry;
+      }
+      return acc;
+    }, {}),
   );
 }
 
-export default function ChartPanel({ symbols }: ChartPanelProps) {
+function formatPrice(value: number, currency: string) {
+  const fractionDigits = value >= 1000 ? 2 : value >= 100 ? 2 : 4;
+  return `${value.toLocaleString('hu-HU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: fractionDigits,
+  })} ${currency}`;
+}
+
+function MarketSection({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<MarketData & { meta: MarketRowMeta }>;
+}) {
+  if (rows.length === 0) return null;
+
   return (
-    <div className="glass-panel flex flex-col h-full min-h-0 overflow-hidden">
-      <div className="p-4 sm:p-6 border-b border-border">
-        <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-[-0.02em]">Grafikonok</h2>
+    <section className="border-t border-[#212121] first:border-t-0">
+      <div className="flex items-center gap-2 px-5 py-4">
+        <div className="flex h-6 w-6 items-center justify-center rounded-none border border-[#2A2A2A] bg-[#151515] text-[#C8243C]">
+          <BarChart3 className="h-3.5 w-3.5" />
+        </div>
+        <h3 className="text-[11px] font-display font-bold uppercase tracking-[0.24em] text-[#9F998F]">
+          {title}
+        </h3>
       </div>
-      <ScrollArea className="flex-1 min-h-0 p-4 sm:p-5 xl:p-6">
-        <div className="space-y-4">
-          {symbols.map((s) => (
-            <SymbolChart key={s} symbol={s} />
-          ))}
+
+      <div>
+        {rows.map((row) => {
+          const isPositive = row.change_percent >= 0;
+          const TrendIcon = isPositive ? TrendingUp : TrendingDown;
+          const showChange = row.meta.section !== 'fx';
+
+          return (
+            <div
+              key={row.symbol}
+              className={`grid items-center gap-3 border-t border-[#1D1D1D] px-5 py-3 first:border-t-0 ${showChange ? 'grid-cols-[minmax(0,1fr)_auto_auto]' : 'grid-cols-[minmax(0,1fr)_auto]'}`}
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-[18px] leading-none text-[#F2EDE4]">{row.meta.label}</span>
+                  <span className="inline-flex items-center border border-[#2A2A2A] bg-[#171717] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.2em] text-[#7C776F]">
+                    {row.meta.code}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-[18px] font-mono leading-none text-[#F2EDE4]">
+                  {formatPrice(row.price, row.currency)}
+                </div>
+              </div>
+
+              {showChange && (
+                <div className={`flex items-center justify-end gap-1 text-[14px] font-mono leading-none ${isPositive ? 'text-[#4ADE80]' : 'text-[#F87171]'}`}>
+                  <TrendIcon className="h-3.5 w-3.5" />
+                  <span>{isPositive ? '+' : ''}{row.change_percent.toFixed(2)}%</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export default function ChartPanel({ marketData }: ChartPanelProps) {
+  const sections = useMemo(() => {
+    const latestEntries = getLatestBySymbol(marketData)
+      .filter((entry) => MARKET_ROW_META[entry.symbol])
+      .map((entry) => ({
+        ...entry,
+        meta: MARKET_ROW_META[entry.symbol],
+      }));
+
+    return {
+      indexes: latestEntries.filter((entry) => entry.meta.section === 'indexes'),
+      stocks: latestEntries.filter((entry) => entry.meta.section === 'stocks'),
+      fx: latestEntries.filter((entry) => entry.meta.section === 'fx'),
+      crypto: latestEntries.filter((entry) => entry.meta.section === 'crypto'),
+      commodities: latestEntries.filter((entry) => entry.meta.section === 'commodities'),
+    };
+  }, [marketData]);
+
+  const sentiment = useMemo(() => {
+    const allRows = Object.values(sections).flat();
+    if (allRows.length === 0) return 'Nincs adat';
+    const positiveCount = allRows.filter((row) => row.change_percent >= 0).length;
+    return positiveCount >= Math.ceil(allRows.length / 2) ? 'Emelkedő' : 'Vegyes';
+  }, [sections]);
+
+  const lastUpdated = useMemo(() => {
+    const latestEntries = getLatestBySymbol(marketData);
+    if (latestEntries.length === 0) return null;
+
+    const newest = latestEntries
+      .map((entry) => new Date(entry.recorded_at).getTime())
+      .sort((a, b) => b - a)[0];
+
+    return new Date(newest).toLocaleString('hu-HU', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, [marketData]);
+
+  return (
+    <div className="h-full min-h-0 overflow-hidden border border-[#7B1E29] bg-[#101010] shadow-[0_2px_8px_rgba(0,0,0,0.24),0_0_0_1px_rgba(123,30,41,0.18)]">
+      <div className="flex items-center justify-between border-b border-[#1F1F1F] px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-none border border-[#2B2B2B] bg-[#151515] text-[#C8243C]">
+            <BarChart3 className="h-4 w-4" />
+          </div>
+          <div className="flex items-center gap-3">
+            <h2 className="font-display text-[13px] font-extrabold uppercase tracking-[0.24em] text-[#EAE4DA]">
+              Piacok
+            </h2>
+            <span className="inline-flex items-center border border-[#225A37] bg-[#163322] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#7BEEA7]">
+              {sentiment}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-[#756F68]">
+          <ChevronUp className="h-4 w-4" />
+        </div>
+      </div>
+
+      <ScrollArea className="h-[calc(100%-65px)]">
+        <div className="pb-2">
+          <MarketSection title={SECTION_META.fx.title} rows={sections.fx} />
+          <MarketSection title={SECTION_META.indexes.title} rows={sections.indexes} />
+          <MarketSection title={SECTION_META.stocks.title} rows={sections.stocks} />
+          <MarketSection title={SECTION_META.crypto.title} rows={sections.crypto} />
+          <MarketSection title={SECTION_META.commodities.title} rows={sections.commodities} />
+
+          {Object.values(sections).flat().length === 0 && (
+            <div className="px-5 py-10 text-center text-sm text-[#8B857C]">
+              Jelenleg nincs megjeleníthető piaci adat.
+            </div>
+          )}
         </div>
       </ScrollArea>
+
+      <div className="flex items-center justify-between border-t border-[#1F1F1F] px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-[#756F68]">
+        <span>{lastUpdated ? `Frissítve ${lastUpdated}` : 'Várakozás adatokra'}</span>
+        <ChevronDown className="h-4 w-4" />
+      </div>
     </div>
   );
 }

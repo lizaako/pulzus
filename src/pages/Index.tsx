@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useArticles, useConflicts, useMarketData } from '@/hooks/useSupabaseData';
 import { Article, Conflict } from '@/lib/supabase';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -10,9 +11,12 @@ import NewsInsightChat from '@/components/NewsInsightChat';
 import ChartPanel from '@/components/ChartPanel';
 import HungarianEconomyPanel from '@/components/HungarianEconomyPanel';
 import MediaLensPanel from '@/components/MediaLensPanel';
+import RealityCheckPanel from '@/components/RealityCheckPanel';
 import StatsBar from '@/components/StatsBar';
 import MarketTicker from '@/components/MarketTicker';
 import Navigation, { View } from '@/components/Navigation';
+import PdfSummaryPanel from '@/components/PdfSummaryPanel';
+import { Button } from '@/components/ui/button';
 
 export default function Index() {
   const { articles, loading: articlesLoading } = useArticles();
@@ -23,13 +27,7 @@ export default function Index() {
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
   const [chatArticle, setChatArticle] = useState<Article | null>(null);
 
-  // Only show symbols we actively track
-  const ACTIVE_SYMBOLS = ['EUR/HUF', 'USD/HUF', 'GBP/HUF', 'CHF/HUF', 'BTC', 'ETH', 'ARANY'];
-  const symbols = useMemo(() => {
-    const available = new Set(marketData.map((d) => d.symbol));
-    const active = ACTIVE_SYMBOLS.filter((s) => available.has(s));
-    return active.length ? active : ['EUR/HUF'];
-  }, [marketData]);
+  const effectiveConflicts = conflicts;
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -41,8 +39,13 @@ export default function Index() {
             PULZUS
           </h1>
           <Navigation current={view} onChange={setView} />
-          <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#F2EDE4]/72 sm:text-right">
-            {new Date().toLocaleString('hu-HU')}
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Button asChild variant="outline" className="rounded-none border-[#333333] bg-transparent px-3 text-[10px] uppercase tracking-[0.18em] text-[#F2EDE4] hover:bg-[#171717] hover:text-[#F2EDE4] sm:text-[11px]">
+              <Link to="/pricing">Árazás</Link>
+            </Button>
+            <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#F2EDE4]/72 sm:text-right">
+              {new Date().toLocaleString('hu-HU')}
+            </div>
           </div>
         </div>
       </header>
@@ -52,12 +55,20 @@ export default function Index() {
           {view === 'markets' ? (
             <MarketTicker articles={articles} />
           ) : (
-            <StatsBar articles={articles} conflicts={conflicts} />
+            <StatsBar articles={articles} conflicts={effectiveConflicts} />
           )}
         </div>
       )}
 
       <main className="relative z-10 px-4 py-6 sm:px-6 sm:py-10 lg:py-12">
+        <div className="mb-6 sm:mb-8">
+          <PdfSummaryPanel
+            articles={articles}
+            conflicts={effectiveConflicts}
+            marketData={marketData}
+          />
+        </div>
+
         {view === 'globe' && (
           <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)_340px] 2xl:grid-cols-[400px_minmax(0,1fr)_380px] gap-4 sm:gap-6 xl:h-[calc(100vh-208px)]">
             <section className="min-h-0 h-full order-2 xl:order-1">
@@ -67,7 +78,7 @@ export default function Index() {
             <section className="min-h-0 h-full order-1 xl:order-2">
               <div className="overflow-hidden relative h-[420px] sm:h-[520px] xl:h-full min-h-[420px] bg-[#111111] border-[3px] border-[#C8243C] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_0_1px_rgba(200,36,60,0.28)]">
                 <ConflictGlobe
-                  conflicts={conflicts}
+                  conflicts={effectiveConflicts}
                   onSelectConflict={setSelectedConflict}
                 />
                 {selectedConflict && (
@@ -83,7 +94,7 @@ export default function Index() {
 
             <section className="min-h-0 h-full order-3">
               <ConflictOverviewPanel
-                conflicts={conflicts}
+                conflicts={effectiveConflicts}
                 selectedConflict={selectedConflict}
                 onSelectConflict={setSelectedConflict}
               />
@@ -97,14 +108,20 @@ export default function Index() {
               <HungarianEconomyPanel />
             </section>
             <section className="min-h-0 h-full">
-              <ChartPanel symbols={symbols} />
+              <ChartPanel marketData={marketData} />
             </section>
           </div>
         )}
 
         {view === 'media' && (
           <section>
-            <MediaLensPanel />
+            <MediaLensPanel articles={articles} />
+          </section>
+        )}
+
+        {view === 'reality-check' && (
+          <section>
+            <RealityCheckPanel />
           </section>
         )}
       </main>

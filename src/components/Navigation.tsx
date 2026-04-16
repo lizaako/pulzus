@@ -1,4 +1,4 @@
-export type View = 'globe' | 'markets' | 'media';
+export type View = 'globe' | 'markets' | 'media' | 'reality-check';
 
 interface NavigationProps {
   current: View;
@@ -8,7 +8,8 @@ interface NavigationProps {
 const items: { id: View; label: string }[] = [
   { id: 'globe', label: 'ÁTTEKINTÉS' },
   { id: 'markets', label: 'PIACOK' },
-  { id: 'media', label: 'MEDIA LENS' },
+  { id: 'media', label: 'NARRATÍVÁK' },
+  { id: 'reality-check', label: 'VALÓSÁG ELLENŐR' },
 ];
 
 export default function Navigation({ current, onChange }: NavigationProps) {
