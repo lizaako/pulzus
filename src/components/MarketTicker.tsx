@@ -1,4 +1,5 @@
 import { Article } from '@/lib/supabase';
+import { useCountry } from '@/lib/country-context';
 
 interface MarketTickerProps {
   articles: Article[];
@@ -14,6 +15,7 @@ function severityColor(level: string) {
 }
 
 export default function MarketTicker({ articles }: MarketTickerProps) {
+  const { t } = useCountry();
   const items = (articles || []).slice(0, 20);
   const truncate = (text: string, max: number) => {
     if (!text) return '';
@@ -24,8 +26,8 @@ export default function MarketTicker({ articles }: MarketTickerProps) {
   return (
     <div className="overflow-hidden border border-border bg-[#101010] shadow-[0_2px_8px_rgba(0,0,0,0.24)] rounded-[10px]">
       <div className="h-12 flex items-stretch gap-0">
-        <div className="px-4 flex items-center bg-[#C8243C] text-[#F2EDE4] text-[11px] uppercase tracking-[0.22em] font-display font-bold rounded-l-[10px]">
-          Friss hírek
+        <div className="px-4 flex items-center text-[#F2EDE4] text-[11px] uppercase tracking-[0.22em] font-display font-bold rounded-l-[10px]" style={{ backgroundColor: 'var(--country-accent)' }}>
+          {t('ticker.latest')}
         </div>
         <div className="relative flex-1 overflow-hidden bg-[#141414] rounded-r-[10px]">
           <div className="ticker-track">

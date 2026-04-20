@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useArticles, useConflicts, useMarketData } from '@/hooks/useSupabaseData';
 import { Article, Conflict } from '@/lib/supabase';
@@ -17,11 +17,13 @@ import MarketTicker from '@/components/MarketTicker';
 import Navigation, { View } from '@/components/Navigation';
 import ExportPdfButton from '@/components/ExportPdfButton';
 import { Button } from '@/components/ui/button';
+import { CountryProvider, COUNTRY_OPTIONS, useCountry } from '@/lib/country-context';
 
-export default function Index() {
+function IndexContent() {
   const { articles, loading: articlesLoading } = useArticles();
   const { conflicts } = useConflicts();
   const { marketData } = useMarketData();
+  const { country, countryCode, setCountryCode, formatDate, themeStyle } = useCountry();
 
   const [view, setView] = useState<View>('globe');
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
@@ -30,7 +32,7 @@ export default function Index() {
   const effectiveConflicts = conflicts;
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className="min-h-screen bg-background relative" style={themeStyle as CSSProperties}>
       <ParticleBackground />
 
       <header className="relative z-10 bg-[#0D0D0D] text-[#F2EDE4] border-b border-[#333333]">
@@ -43,9 +45,21 @@ export default function Index() {
             <Button asChild variant="outline" className="rounded-none border-[#333333] bg-transparent px-3 text-[10px] uppercase tracking-[0.18em] text-[#F2EDE4] hover:bg-[#171717] hover:text-[#F2EDE4] sm:text-[11px]">
               <Link to="/pricing">Árazás</Link>
             </Button>
+            <select
+              aria-label="Ország"
+              value={countryCode}
+              onChange={(event) => setCountryCode(event.target.value as typeof countryCode)}
+              className="h-9 rounded-none border border-[#333333] bg-transparent px-3 text-[10px] uppercase tracking-[0.18em] text-[#F2EDE4] focus:outline-none sm:text-[11px]"
+            >
+              {COUNTRY_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code} className="bg-[#101010] text-[#F2EDE4]">
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <ExportPdfButton articles={articles} conflicts={effectiveConflicts} marketData={marketData} />
             <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#F2EDE4]/72 sm:text-right">
-              {new Date().toLocaleString('hu-HU')}
+              {formatDate(new Date(), { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
         </div>
@@ -70,10 +84,18 @@ export default function Index() {
             </section>
 
             <section className="min-h-0 h-full order-1 xl:order-2">
-              <div className="overflow-hidden relative h-[420px] sm:h-[520px] xl:h-full min-h-[420px] bg-[#111111] border-[3px] border-[#C8243C] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_0_1px_rgba(200,36,60,0.28)]">
+              <div
+                className="overflow-hidden relative h-[420px] sm:h-[520px] xl:h-full min-h-[420px] bg-[#111111] border-[3px]"
+                style={{
+                  borderColor: 'var(--country-accent)',
+                  boxShadow: `0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(var(--country-accent-rgb),0.28)`,
+                }}
+              >
                 <ConflictGlobe
                   conflicts={effectiveConflicts}
                   onSelectConflict={setSelectedConflict}
+                  selectedCountry={country.globeCountry}
+                  accentColor={country.accentHex}
                 />
                 {selectedConflict && (
                   <div className="absolute left-3 right-3 bottom-3 sm:left-auto sm:right-4 sm:top-4 sm:bottom-auto sm:w-80 sm:max-w-[calc(100%-2rem)] z-20">
@@ -128,5 +150,13 @@ export default function Index() {
         }}
       />
     </div>
+  );
+}
+
+export default function Index() {
+  return (
+    <CountryProvider>
+      <IndexContent />
+    </CountryProvider>
   );
 }

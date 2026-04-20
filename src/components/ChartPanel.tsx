@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { BarChart3, ChevronDown, ChevronUp, TrendingDown, TrendingUp } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MarketData } from '@/lib/supabase';
+import { useCountry } from '@/lib/country-context';
 
 interface ChartPanelProps {
   marketData: MarketData[];
@@ -142,6 +143,7 @@ function MarketSection({
 }
 
 export default function ChartPanel({ marketData }: ChartPanelProps) {
+  const { countryCode, formatDate } = useCountry();
   const sections = useMemo(() => {
     const latestEntries = getLatestBySymbol(marketData)
       .filter((entry) => MARKET_ROW_META[entry.symbol])
@@ -161,10 +163,12 @@ export default function ChartPanel({ marketData }: ChartPanelProps) {
 
   const sentiment = useMemo(() => {
     const allRows = Object.values(sections).flat();
-    if (allRows.length === 0) return 'Nincs adat';
+    if (allRows.length === 0) return countryCode === 'hu' ? 'Nincs adat' : countryCode === 'de' ? 'Keine Daten' : countryCode === 'es' ? 'Sin datos' : countryCode === 'fr' ? 'Aucune donnée' : countryCode === 'fi' ? 'Ei dataa' : countryCode === 'nl' ? 'Geen data' : 'No data';
     const positiveCount = allRows.filter((row) => row.change_percent >= 0).length;
-    return positiveCount >= Math.ceil(allRows.length / 2) ? 'Emelkedő' : 'Vegyes';
-  }, [sections]);
+    return positiveCount >= Math.ceil(allRows.length / 2)
+      ? (countryCode === 'hu' ? 'Emelkedő' : countryCode === 'de' ? 'Stärker' : countryCode === 'es' ? 'Al alza' : countryCode === 'fr' ? 'En hausse' : countryCode === 'fi' ? 'Nousussa' : countryCode === 'nl' ? 'Stijgend' : 'Rising')
+      : (countryCode === 'hu' ? 'Vegyes' : countryCode === 'de' ? 'Gemischt' : countryCode === 'es' ? 'Mixto' : countryCode === 'fr' ? 'Mixte' : countryCode === 'fi' ? 'Sekalainen' : countryCode === 'nl' ? 'Gemengd' : 'Mixed');
+  }, [countryCode, sections]);
 
   const lastUpdated = useMemo(() => {
     const latestEntries = getLatestBySymbol(marketData);
@@ -174,24 +178,24 @@ export default function ChartPanel({ marketData }: ChartPanelProps) {
       .map((entry) => new Date(entry.recorded_at).getTime())
       .sort((a, b) => b - a)[0];
 
-    return new Date(newest).toLocaleString('hu-HU', {
+    return formatDate(newest, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
-  }, [marketData]);
+  }, [formatDate, marketData]);
 
   return (
-    <div className="h-full min-h-0 overflow-hidden border border-[#7B1E29] bg-[#101010] shadow-[0_2px_8px_rgba(0,0,0,0.24),0_0_0_1px_rgba(123,30,41,0.18)]">
+    <div className="h-full min-h-0 overflow-hidden border bg-[#101010] shadow-[0_2px_8px_rgba(0,0,0,0.24)]" style={{ borderColor: 'rgba(var(--country-accent-rgb),0.65)', boxShadow: '0 2px 8px rgba(0,0,0,0.24),0 0 0 1px rgba(var(--country-accent-rgb),0.18)' }}>
       <div className="flex items-center justify-between border-b border-[#1F1F1F] px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-none border border-[#2B2B2B] bg-[#151515] text-[#C8243C]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-none border border-[#2B2B2B] bg-[#151515] text-[var(--country-accent)]">
             <BarChart3 className="h-4 w-4" />
           </div>
           <div className="flex items-center gap-3">
             <h2 className="font-display text-[13px] font-extrabold uppercase tracking-[0.24em] text-[#EAE4DA]">
-              Piacok
+              {countryCode === 'hu' ? 'Piacok' : countryCode === 'de' ? 'Märkte' : countryCode === 'es' ? 'Mercados' : countryCode === 'fr' ? 'Marchés' : countryCode === 'fi' ? 'Markkinat' : countryCode === 'nl' ? 'Markten' : 'Markets'}
             </h2>
             <span className="inline-flex items-center border border-[#225A37] bg-[#163322] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#7BEEA7]">
               {sentiment}
@@ -213,14 +217,14 @@ export default function ChartPanel({ marketData }: ChartPanelProps) {
 
           {Object.values(sections).flat().length === 0 && (
             <div className="px-5 py-10 text-center text-sm text-[#8B857C]">
-              Jelenleg nincs megjeleníthető piaci adat.
+              {countryCode === 'hu' ? 'Jelenleg nincs megjeleníthető piaci adat.' : countryCode === 'de' ? 'Derzeit sind keine Marktdaten verfügbar.' : countryCode === 'es' ? 'No hay datos de mercado disponibles en este momento.' : countryCode === 'fr' ? 'Aucune donnée de marché disponible pour le moment.' : countryCode === 'fi' ? 'Markkinadataa ei ole juuri nyt saatavilla.' : countryCode === 'nl' ? 'Er zijn momenteel geen marktgegevens beschikbaar.' : 'No market data is currently available.'}
             </div>
           )}
         </div>
       </ScrollArea>
 
       <div className="flex items-center justify-between border-t border-[#1F1F1F] px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-[#756F68]">
-        <span>{lastUpdated ? `Frissítve ${lastUpdated}` : 'Várakozás adatokra'}</span>
+        <span>{lastUpdated ? `${countryCode === 'hu' ? 'Frissítve' : countryCode === 'de' ? 'Aktualisiert' : countryCode === 'es' ? 'Actualizado' : countryCode === 'fr' ? 'Mis à jour' : countryCode === 'fi' ? 'Päivitetty' : countryCode === 'nl' ? 'Bijgewerkt' : 'Updated'} ${lastUpdated}` : (countryCode === 'hu' ? 'Várakozás adatokra' : countryCode === 'de' ? 'Warten auf Daten' : countryCode === 'es' ? 'Esperando datos' : countryCode === 'fr' ? 'En attente des données' : countryCode === 'fi' ? 'Odotetaan dataa' : countryCode === 'nl' ? 'Wachten op gegevens' : 'Waiting for data')}</span>
         <ChevronDown className="h-4 w-4" />
       </div>
     </div>

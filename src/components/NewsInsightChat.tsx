@@ -12,18 +12,12 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { LoaderCircle, SendHorizontal } from 'lucide-react';
+import { useCountry } from '@/lib/country-context';
 
 interface NewsInsightChatProps {
   article: Article | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function createIntroMessage(article: Article): NewsChatMessage {
-  return {
-    role: 'assistant',
-    content: `Kérdezz bármit erről a hírről: "${String(article.title || 'ez a hír')}".`,
-  };
 }
 
 function splitTopics(topics: unknown): string[] {
@@ -37,6 +31,7 @@ function splitTopics(topics: unknown): string[] {
 }
 
 export default function NewsInsightChat({ article, open, onOpenChange }: NewsInsightChatProps) {
+  const { t, country } = useCountry();
   const [messages, setMessages] = useState<NewsChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -46,9 +41,9 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
 
   useEffect(() => {
     if (!article || !open) return;
-    setMessages([createIntroMessage(article)]);
+    setMessages([{ role: 'assistant', content: t('news.intro', { title: String(article.title || 'story') }) }]);
     setDraft('');
-  }, [article, open]);
+  }, [article, open, t]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,14 +92,14 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
             <aside className="border-b border-border bg-secondary p-6 lg:border-b-0 lg:border-r">
               <DialogHeader className="space-y-3 text-left">
                 <DialogTitle className="font-display text-2xl font-extrabold tracking-[-0.02em] text-foreground">
-                  Hírelemző chat
+                  {t('news.chatTitle')}
                 </DialogTitle>
               </DialogHeader>
 
               <div className="mt-5 space-y-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Kiválasztott hír
+                    {t('news.selected')}
                   </p>
                   <h3 className="mt-2 text-sm font-semibold leading-snug text-foreground">
                     {String(article.title || 'Cím nélküli hír')}
@@ -114,24 +109,24 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">{String(article.source || 'Ismeretlen forrás')}</Badge>
                   <Badge variant="outline">{String(article.warning_level || 'alacsony')} riasztás</Badge>
-                  {article.affects_hungary && <Badge variant="destructive">Magyar hatás</Badge>}
+                  {article.affects_hungary && <Badge variant="destructive">{t('news.impactBadge', { country: country.countryName })}</Badge>}
                 </div>
 
                 <div className="border border-border bg-card p-4">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Összefoglaló
+                    {t('news.summary')}
                   </p>
                   <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                     {typeof article.summary === 'string' && article.summary.trim()
                       ? article.summary
-                      : 'Ehhez a cikkhez még nincs mentett összefoglaló.'}
+                      : t('news.summaryMissing')}
                   </p>
                 </div>
 
                 {topics.length > 0 && (
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                      Témák
+                      {t('news.topics')}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {topics.map((topic) => (
@@ -173,7 +168,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                     <div className="flex justify-start">
                       <div className="flex items-center gap-2 border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground">
                         <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
-                        Elemzem ezt a hírt...
+                        {t('news.analyzing')}
                       </div>
                     </div>
                   )}
@@ -187,7 +182,7 @@ export default function NewsInsightChat({ article, open, onOpenChange }: NewsIns
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     onKeyDown={(event) => void handleKeyDown(event)}
-                    placeholder="Írd ide a kérdést..."
+                    placeholder={t('news.draft')}
                     className="min-h-[96px] resize-none border-0 bg-transparent px-0 py-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                   <div className="mt-3 flex items-center justify-end gap-3">

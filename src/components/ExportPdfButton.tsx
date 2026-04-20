@@ -8,6 +8,7 @@ import {
   type SummaryWindowId,
 } from '@/lib/pdf-summary';
 import { Button } from '@/components/ui/button';
+import { useCountry } from '@/lib/country-context';
 
 interface ExportPdfButtonProps {
   articles:   Article[];
@@ -20,6 +21,7 @@ const PERIOD_OPTIONS = SUMMARY_WINDOWS.filter(w => w.id !== '1h'); // 1d | 1w | 
 export default function ExportPdfButton({ articles, conflicts, marketData }: ExportPdfButtonProps) {
   const [windowId, setWindowId]       = useState<SummaryWindowId>('1d');
   const [isExporting, setIsExporting] = useState(false);
+  const { t } = useCountry();
 
   const selectedWindow = SUMMARY_WINDOWS.find(w => w.id === windowId) ?? SUMMARY_WINDOWS[1];
 
@@ -74,7 +76,7 @@ export default function ExportPdfButton({ articles, conflicts, marketData }: Exp
             disabled={isExporting}
             className="px-2.5 text-[9px] font-bold uppercase tracking-[0.14em] transition-colors disabled:opacity-50"
             style={{
-              background:  w.id === windowId ? '#C8243C' : 'transparent',
+              background:  w.id === windowId ? 'var(--country-accent)' : 'transparent',
               color:       w.id === windowId ? '#F2EDE4' : 'rgba(242,237,228,0.55)',
               borderRight: i < PERIOD_OPTIONS.length - 1 ? '1px solid #333' : 'none',
             }}
@@ -95,7 +97,7 @@ export default function ExportPdfButton({ articles, conflicts, marketData }: Exp
         {isExporting
           ? <LoaderCircle className="h-3 w-3 animate-spin" />
           : <Download className="h-3 w-3" />}
-        Export PDF
+        {t('export.pdf')}
       </Button>
     </div>
   );

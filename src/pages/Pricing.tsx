@@ -11,10 +11,10 @@ const TIERS = [
     label: 'Ingyenes',
     price: '0 euró / hó',
     features: [
-      'Alap hírfolyam magyar fókuszú összefoglalókkal',
-      'Media Lens összehasonlítások napi 3 alkalommal',
-      'Káosz index és konfliktusgömb',
+      'Óránként frissülő hírfolyam',
       'Nincs szükség fiókra',
+      'Live konfliktusgömb és káosz index',
+      'Napi 10 cikkelemzés',
     ],
   },
   {
@@ -22,10 +22,8 @@ const TIERS = [
     label: 'Pro',
     price: '4.90 euró / hó',
     features: [
-      'Korlátlan Media Lens összehasonlítás',
-      'Manipulációdetektor minden cikken',
-      'Sztori követő bármely témára',
-      'Vakfolt-detektor',
+      'Korlátlan cikkelemzés',
+      'Minden alap funkció',
       'PDF riport export',
       'Email értesítések, amikor megugrik a káoszpontszám',
     ],
@@ -38,7 +36,6 @@ const TIERS = [
       'Minden Pro funkció',
       'API hozzáférés az összes adathoz',
       'Egyedi országfigyelés Magyarországon túl',
-      'White label riportok a szervezet arculatával',
       'Dedikált kapcsolattartó',
       'Célcsoport: civil szervezetek, egyetemek, nagykövetségek és külföldi sajtóirodák',
     ],
@@ -73,10 +70,10 @@ export default function Pricing() {
           <div className="max-w-3xl">
             <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Előfizetések</p>
             <h2 className="mt-2 font-display text-4xl font-extrabold tracking-[-0.04em] text-foreground">
-              Ugyanaz a vizuális rendszer, világos csomagokkal.
+              Az igazsághoz való hozzáférés alapvető jog.
             </h2>
             <p className="mt-4 text-base text-muted-foreground">
-              Az egyes szintek ugyanarra a Pulzus felületre épülnek, csak a hozzáférhető elemzési mélység és a használati környezet változik.
+              A Pulzus különböző csomagjai azért készültek, hogy mindenki a saját helyzetéhez illő mélységben férhessen hozzá a tisztább, ellenőrizhetőbb információkhoz.
             </p>
           </div>
 

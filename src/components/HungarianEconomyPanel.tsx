@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/chart';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
+import { adaptCountryReference, useCountry } from '@/lib/country-context';
 
 type MetricTone = 'good' | 'bad' | 'neutral';
 
@@ -13,6 +14,7 @@ interface EconomyMetric {
   label: string;
   value: string;
   unit: string;
+  asOf: string;
   trend: 'up' | 'down' | 'flat';
   tone: MetricTone;
   series: number[];
@@ -30,68 +32,75 @@ const ECONOMY_METRICS: EconomyMetric[] = [
   {
     id: 'inflation',
     label: 'Infláció',
-    value: '5,2',
+    value: '1,4',
     unit: '%',
+    asOf: '2026. február',
     trend: 'down',
     tone: 'good',
-    series: [7.6, 7.1, 6.9, 6.5, 6.2, 6.0, 5.8, 5.7, 5.6, 5.5, 5.3, 5.2],
-    explanation: 'Az infláció 5,2%: vagyis ami tavaly 1 000 Ft volt, az most nagyjából 1 052 Ft körül lehet.',
+    series: [5.6, 4.7, 4.2, 4.1, 3.7, 3.6, 3.5, 3.4, 3.3, 2.1, 1.4, 1.4],
+    explanation: 'A KSH szerint 2026 februárjában 1,4% volt az éves infláció, vagyis az áremelkedés tempója sokat lassult az egy évvel korábbi szinthez képest.',
   },
   {
     id: 'unemployment',
     label: 'Munkanélküliség',
-    value: '4,4',
+    value: '4,8',
     unit: '%',
-    trend: 'flat',
-    tone: 'neutral',
-    series: [4.1, 4.2, 4.3, 4.2, 4.4, 4.5, 4.4, 4.3, 4.4, 4.4, 4.5, 4.4],
-    explanation: 'Ez azt jelenti, hogy 100 aktív munkakeresőből nagyjából 4-5 ember nem talál épp állást.',
+    asOf: '2026. február',
+    trend: 'up',
+    tone: 'bad',
+    series: [4.1, 4.1, 4.2, 4.3, 4.2, 4.3, 4.4, 4.5, 4.5, 4.6, 4.6, 4.8],
+    explanation: 'A KSH legfrissebb adata alapján 2026 februárjában 4,8% volt a munkanélküliségi ráta, tehát 100 gazdaságilag aktív emberből közel 5 nem talált munkát.',
   },
   {
     id: 'gdp',
     label: 'GDP növekedés',
-    value: '0,8',
+    value: '0,4',
     unit: '%',
+    asOf: '2025. év',
     trend: 'up',
     tone: 'good',
-    series: [-0.4, -0.2, 0.0, 0.1, 0.2, 0.3, 0.4, 0.4, 0.5, 0.6, 0.7, 0.8],
-    explanation: 'A gazdaság enyhén növekszik: ez nem robbanásszerű fellendülés, inkább lassú kapaszkodás felfelé.',
+    series: [-0.7, -0.4, -0.2, 0.0, 0.1, 0.2, 0.2, 0.3, 0.3, 0.3, 0.4, 0.4],
+    explanation: 'A KSH második becslése szerint 2025 egészében 0,4%-kal nőtt a magyar GDP, tehát van növekedés, de továbbra is visszafogott ütemben.',
   },
   {
     id: 'average-wage',
     label: 'Átlagbér',
-    value: '661 400',
+    value: '725 500',
     unit: 'HUF',
+    asOf: '2026. február',
     trend: 'up',
     tone: 'good',
-    series: [575000, 582000, 590000, 599000, 605000, 614000, 621000, 629000, 638000, 646000, 654000, 661400],
-    explanation: 'Ez a teljes munkaidős bruttó átlagbér: vagyis a magasabb fizetések is erősen felfelé húzzák az átlagot.',
+    series: [661400, 668100, 714400, 708300, 702800, 704400, 692700, 756400, 789200, 840600, 725500, 725500],
+    explanation: 'A KSH szerint a teljes munkaidős bruttó átlagkereset 2026 februárjában 725 500 forint volt. Ez bruttó adat, tehát az adók és járulékok még lejönnek belőle.',
   },
   {
     id: 'minimum-wage',
     label: 'Minimálbér',
-    value: '290 800',
+    value: '322 800',
     unit: 'HUF',
+    asOf: '2026. január 1.',
     trend: 'up',
     tone: 'good',
-    series: [266800, 266800, 266800, 266800, 266800, 266800, 290800, 290800, 290800, 290800, 290800, 290800],
-    explanation: 'A minimálbér emelkedése a legalacsonyabb keresetű dolgozók helyzetét javítja, de ettől még nem lesz automatikusan olcsóbb az élet.',
+    series: [266800, 266800, 266800, 266800, 266800, 266800, 290800, 290800, 290800, 290800, 290800, 322800],
+    explanation: '2026. január 1-től a havi bruttó minimálbér 322 800 forint. Ez a legalacsonyabb kötelező teljes munkaidős bér a nem szakképzettséghez kötött munkakörökben.',
   },
   {
     id: 'eur-huf',
     label: 'HUF/EUR árfolyam',
-    value: '403,20',
+    value: '364,69',
     unit: 'HUF',
+    asOf: '2026. április 16.',
     trend: 'up',
     tone: 'bad',
-    series: [389.4, 391.8, 394.1, 392.7, 395.5, 397.6, 399.2, 401.8, 404.1, 402.3, 401.9, 403.2],
-    explanation: 'Ha az EUR/HUF feljebb megy, általában gyengébb a forint: az import és sok külföldi termék drágább lehet.',
+    series: [384.7, 383.4, 382.9, 381.5, 379.6, 377.2, 376.0, 363.1, 363.6, 363.7, 364.0, 364.69],
+    explanation: 'Az MNB hivatalos napi árfolyama 2026. április 16-án 364,69 forint volt 1 euróért. Ha ez a szám emelkedik, az általában a forint gyengülését jelzi.',
   },
   {
     id: 'emigrants',
     label: 'Kivándorlók száma',
     value: '35 000',
     unit: 'fő/év',
+    asOf: 'becslés',
     trend: 'up',
     tone: 'bad',
     series: [29000, 29500, 30100, 30800, 31500, 32100, 32700, 33100, 33600, 34100, 34600, 35000],
@@ -102,6 +111,7 @@ const ECONOMY_METRICS: EconomyMetric[] = [
     label: 'Budapesti lakásár',
     value: '1 230 000',
     unit: 'HUF/m²',
+    asOf: 'becslés',
     trend: 'up',
     tone: 'bad',
     series: [980000, 995000, 1010000, 1035000, 1060000, 1090000, 1125000, 1150000, 1180000, 1200000, 1215000, 1230000],
@@ -110,18 +120,20 @@ const ECONOMY_METRICS: EconomyMetric[] = [
   {
     id: 'wage-gap',
     label: 'Minimálbér vs átlagbér különbség',
-    value: '56,0',
+    value: '55,5',
     unit: '%',
+    asOf: '2026. február',
     trend: 'down',
     tone: 'good',
-    series: [62, 61, 60, 60, 59, 58, 58, 57, 57, 56.5, 56.2, 56.0],
-    explanation: 'Minél kisebb ez a rés, annál közelebb van az alsó bérszint az országos átlagkeresethez.',
+    series: [62, 61, 60, 60, 59, 58, 58, 57, 57, 56.5, 56.2, 55.5],
+    explanation: 'A 322 800 forintos minimálbér a 725 500 forintos februári bruttó átlagbér nagyjából 44,5%-a, vagyis a különbség körülbelül 55,5%.',
   },
   {
     id: 'energy',
     label: 'Energiaárak átlaga',
     value: '68',
     unit: 'HUF/kWh ekv.',
+    asOf: 'becslés',
     trend: 'flat',
     tone: 'neutral',
     series: [64, 65, 65, 66, 67, 68, 69, 68, 67, 68, 68, 68],
@@ -132,6 +144,7 @@ const ECONOMY_METRICS: EconomyMetric[] = [
     label: 'Diákhitel átlagos összeg',
     value: '2 180 000',
     unit: 'HUF',
+    asOf: 'becslés',
     trend: 'up',
     tone: 'bad',
     series: [1860000, 1895000, 1930000, 1970000, 2010000, 2040000, 2070000, 2100000, 2135000, 2150000, 2165000, 2180000],
@@ -147,9 +160,15 @@ function trendColor(tone: MetricTone) {
 
 function TrendIcon({ trend, tone }: { trend: EconomyMetric['trend']; tone: MetricTone }) {
   const color = trendColor(tone);
+  const shouldInvertDirection = tone === 'bad';
+  const visualTrend = trend === 'flat'
+    ? 'flat'
+    : shouldInvertDirection
+      ? (trend === 'up' ? 'down' : 'up')
+      : trend;
 
-  if (trend === 'up') return <ArrowUpRight className={`h-4 w-4 ${color}`} />;
-  if (trend === 'down') return <ArrowDownRight className={`h-4 w-4 ${color}`} />;
+  if (visualTrend === 'up') return <ArrowUpRight className={`h-4 w-4 ${color}`} />;
+  if (visualTrend === 'down') return <ArrowDownRight className={`h-4 w-4 ${color}`} />;
   return <Minus className={`h-4 w-4 ${color}`} />;
 }
 
@@ -173,17 +192,22 @@ function MetricSparkline({ series, tone }: { series: number[]; tone: MetricTone 
 }
 
 export default function HungarianEconomyPanel() {
+  const { country, countryCode } = useCountry();
   const topMetrics = useMemo(() => ECONOMY_METRICS.slice(0, 6), []);
   const lowerMetrics = useMemo(() => ECONOMY_METRICS.slice(6), []);
+  const title = countryCode === 'hu' ? 'Magyar gazdaság' : countryCode === 'de' ? `${country.countryName} Wirtschaft` : countryCode === 'es' ? `Economía de ${country.countryName}` : countryCode === 'fr' ? `Économie de ${country.countryName}` : countryCode === 'fi' ? `${country.countryName}n talous` : countryCode === 'nl' ? `Economie van ${country.countryName}` : `${country.countryName} economy`;
 
   return (
     <div className="glass-panel h-full min-h-0 flex flex-col overflow-hidden">
       <div className="p-4 sm:p-6 border-b border-border">
         <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-[-0.02em]">
-          Magyar gazdaság
+          {title}
         </h2>
         <p className="mt-2 text-[15px] text-muted-foreground">
-          A legfontosabb mutatók röviden, emberi nyelven és mini trendekkel.
+          {countryCode === 'hu' ? 'A legfontosabb mutatók röviden, emberi nyelven és mini trendekkel.' : countryCode === 'de' ? 'Die wichtigsten Kennzahlen kurz, verständlich und mit Mini-Trends.' : countryCode === 'es' ? 'Los indicadores más importantes, explicados de forma clara y con mini tendencias.' : countryCode === 'fr' ? 'Les indicateurs clés, expliqués simplement avec des mini-tendances.' : countryCode === 'fi' ? 'Tärkeimmät mittarit lyhyesti, selkeästi ja pienillä trendikäyrillä.' : countryCode === 'nl' ? 'De belangrijkste indicatoren kort, helder en met mini-trends.' : 'The key indicators in plain language with mini trends.'}
+        </p>
+        <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          {countryCode === 'hu' ? 'Frissítve a legutóbbi elérhető hivatalos adatokkal' : countryCode === 'de' ? 'Aktualisiert mit den neuesten offiziellen Daten' : countryCode === 'es' ? 'Actualizado con los datos oficiales más recientes' : countryCode === 'fr' ? 'Mis à jour avec les dernières données officielles' : countryCode === 'fi' ? 'Päivitetty uusimmilla virallisilla tiedoilla' : countryCode === 'nl' ? 'Bijgewerkt met de nieuwste officiële gegevens' : 'Updated with the latest official data'}
         </p>
       </div>
 
@@ -195,6 +219,7 @@ export default function HungarianEconomyPanel() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{metric.label}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{metric.asOf}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="text-lg sm:text-xl font-display font-bold text-foreground">
                         {metric.value}
@@ -212,8 +237,8 @@ export default function HungarianEconomyPanel() {
                 </div>
 
                 <div className="mt-3 border border-border bg-secondary p-3">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-primary">Mit jelent ez?</p>
-                  <p className="mt-1 text-[14px] leading-[1.6] text-muted-foreground">{metric.explanation}</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-primary">{countryCode === 'hu' ? 'Mit jelent ez?' : countryCode === 'de' ? 'Was bedeutet das?' : countryCode === 'es' ? '¿Qué significa esto?' : countryCode === 'fr' ? 'Qu’est-ce que cela signifie ?' : countryCode === 'fi' ? 'Mitä tämä tarkoittaa?' : countryCode === 'nl' ? 'Wat betekent dit?' : 'What does this mean?'}</p>
+                  <p className="mt-1 text-[14px] leading-[1.6] text-muted-foreground">{adaptCountryReference(metric.explanation, country.countryName)}</p>
                 </div>
               </div>
             ))}
@@ -223,10 +248,10 @@ export default function HungarianEconomyPanel() {
         <section>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <h3 className="font-display text-xs font-bold text-primary tracking-wider">
-              További fontos számok
+              {countryCode === 'hu' ? 'További fontos számok' : countryCode === 'de' ? 'Weitere wichtige Kennzahlen' : countryCode === 'es' ? 'Más cifras importantes' : countryCode === 'fr' ? 'Autres chiffres clés' : countryCode === 'fi' ? 'Muita tärkeitä lukuja' : countryCode === 'nl' ? 'Meer belangrijke cijfers' : 'More key figures'}
             </h3>
             <span className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-              12 hónapos mini trend
+              {countryCode === 'hu' ? '12 hónapos mini trend' : countryCode === 'de' ? '12-Monats-Minitrend' : countryCode === 'es' ? 'Mini tendencia de 12 meses' : countryCode === 'fr' ? 'Mini tendance sur 12 mois' : countryCode === 'fi' ? '12 kuukauden minitrendi' : countryCode === 'nl' ? 'Mini-trend van 12 maanden' : '12-month mini trend'}
             </span>
           </div>
 
@@ -236,7 +261,8 @@ export default function HungarianEconomyPanel() {
                 <div className="grid grid-cols-1 xl:grid-cols-[220px_90px_minmax(0,1fr)] gap-3 items-center">
                   <div>
                     <p className="text-xs font-semibold text-foreground">{metric.label}</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">{metric.explanation}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{adaptCountryReference(metric.explanation, country.countryName)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-[0.18em]">{metric.asOf}</p>
                   </div>
 
                   <div className="flex items-center gap-2">

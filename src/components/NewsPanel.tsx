@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Article } from '@/lib/supabase';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { localizeHungaryImpact } from '@/lib/article-localization';
-import { translateHungaryImpactText } from '@/lib/news-chat';
 import { ExternalLink, Search, SendHorizontal } from 'lucide-react';
+import { adaptCountryReference, useCountry } from '@/lib/country-context';
 
 interface NewsPanelProps {
   articles: Article[];
@@ -44,8 +44,8 @@ function warningBadge(level: string) {
 }
 
 export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelProps) {
-  const [translatedImpacts, setTranslatedImpacts] = useState<Record<string, string>>({});
   const [keyword, setKeyword] = useState('');
+  const { t, country, formatDate } = useCountry();
 
   const filteredArticles = useMemo(() => {
     const query = keyword.trim().toLowerCase();
@@ -66,40 +66,10 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
     });
   }, [articles, keyword]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const candidates = articles.filter((article) => article.affects_hungary && article.hungary_impact);
-    const missing = candidates.filter((article) => !translatedImpacts[article.id]);
-
-    if (missing.length === 0) return;
-
-    void Promise.all(
-      missing.map(async (article) => {
-        const translation = await translateHungaryImpactText(article.hungary_impact);
-        return { id: article.id, translation };
-      }),
-    ).then((results) => {
-      if (cancelled) return;
-
-      setTranslatedImpacts((current) => {
-        const next = { ...current };
-        for (const result of results) {
-          next[result.id] = result.translation;
-        }
-        return next;
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [articles, translatedImpacts]);
-
   if (loading) {
     return (
       <div className="glass-panel p-6 h-full flex items-center justify-center">
-        <div className="text-primary font-display text-sm uppercase tracking-[0.18em]">Betöltés</div>
+        <div className="text-primary font-display text-sm uppercase tracking-[0.18em]">{t('news.loading')}</div>
       </div>
     );
   }
@@ -107,13 +77,13 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
   return (
     <div className="glass-panel h-full flex flex-col">
       <div className="p-6 border-b border-border">
-        <h2 className="font-display text-2xl font-extrabold text-foreground tracking-[-0.02em]">Hírfolyam</h2>
+        <h2 className="font-display text-2xl font-extrabold text-foreground tracking-[-0.02em]">{t('news.feed')}</h2>
         <div className="relative mt-4">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="Kulcsszó keresése"
+            placeholder={t('news.search')}
             className="h-10 rounded-none border-border bg-secondary pl-10"
           />
         </div>
@@ -144,8 +114,8 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
                     href={article.url}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label="Eredeti cikk megnyitasa"
-                    title="Eredeti cikk megnyitasa"
+                    aria-label={t('news.original')}
+                    title={t('news.original')}
                     className="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-border/70 bg-background/60 text-accent transition-colors hover:border-primary/45 hover:text-[#A01E30]"
                     onClick={(event) => event.stopPropagation()}
                   >
@@ -156,11 +126,13 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
 
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {article.source} &bull; {new Date(article.published_at).toLocaleDateString('hu-HU')}
+                  {article.source} &bull; {formatDate(article.published_at, { year: 'numeric', month: 'numeric', day: 'numeric' })}
                 </span>
                 {warningBadge(article.warning_level)}
                 {article.affects_hungary && (
-                  <span className="text-[10px] px-2 py-1 bg-destructive text-destructive-foreground border border-destructive uppercase tracking-[0.18em]">Magyar hatás</span>
+                  <span className="text-[10px] px-2 py-1 bg-destructive text-destructive-foreground border border-destructive uppercase tracking-[0.18em]">
+                    {t('news.impactBadge', { country: country.countryName })}
+                  </span>
                 )}
               </div>
 
@@ -194,8 +166,8 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
                     size="sm"
                     variant="outline"
                     className="h-9 w-9 p-0"
-                    aria-label="Hírelemző megnyitása"
-                    title="Hírelemző"
+                    aria-label={t('news.chat')}
+                    title={t('news.chat')}
                     onClick={() => onOpenChat(article)}
                   >
                     <SendHorizontal className="h-4 w-4" />
@@ -205,9 +177,11 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
 
               {article.affects_hungary && article.hungary_impact && (
                 <div className="mt-1 p-4 bg-secondary border border-border">
-                  <p className="text-[10px] text-destructive font-medium uppercase tracking-[0.18em] mb-1">Hatás Magyarországra</p>
+                  <p className="text-[10px] text-destructive font-medium uppercase tracking-[0.18em] mb-1">
+                    {t('news.impactTitle', { country: country.countryName })}
+                  </p>
                   <p className="text-[14px] text-muted-foreground">
-                    {translatedImpacts[article.id] || localizeHungaryImpact(article.hungary_impact)}
+                    {adaptCountryReference(localizeHungaryImpact(article.hungary_impact), country.countryName)}
                   </p>
                 </div>
               )}
@@ -216,7 +190,7 @@ export default function NewsPanel({ articles, loading, onOpenChat }: NewsPanelPr
 
           {filteredArticles.length === 0 && (
             <div className="border border-dashed border-border p-6 text-sm text-muted-foreground">
-              Nincs találat a megadott kulcsszóra.
+              {t('news.noResults')}
             </div>
           )}
         </div>

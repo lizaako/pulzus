@@ -1,4 +1,5 @@
 import { Article, Conflict } from '@/lib/supabase';
+import { useCountry } from '@/lib/country-context';
 
 interface StatsBarProps {
   articles: Article[];
@@ -6,6 +7,7 @@ interface StatsBarProps {
 }
 
 export default function StatsBar({ articles, conflicts }: StatsBarProps) {
+  const { t, country } = useCountry();
   const highConflicts = conflicts.filter((c) => c.severity?.toLowerCase() === 'high').length;
   const avgSentiment = articles.length
     ? articles.reduce((sum, a) => sum + (a.sentiment_score || 0), 0) / articles.length
@@ -14,27 +16,27 @@ export default function StatsBar({ articles, conflicts }: StatsBarProps) {
 
   const stats = [
     {
-      label: 'KONFLIKTUSOK',
+      label: t('stats.conflicts'),
       value: conflicts.length,
       color: 'text-primary',
     },
     {
-      label: 'MAGAS KOCKÁZAT',
+      label: t('stats.highRisk'),
       value: highConflicts,
       color: 'text-destructive',
     },
     {
-      label: 'CIKKEK',
+      label: t('stats.articles'),
       value: articles.length,
       color: 'text-foreground',
     },
     {
-      label: 'ÁTL. HANGULAT',
+      label: t('stats.sentiment'),
       value: avgSentiment.toFixed(2),
       color: avgSentiment >= 0 ? 'text-success' : 'text-destructive',
     },
     {
-      label: 'MAGYAR HATÁS',
+      label: t('stats.countryImpact', { country: country.countryNameUpper }),
       value: hungaryArticles,
       color: 'text-destructive',
     },

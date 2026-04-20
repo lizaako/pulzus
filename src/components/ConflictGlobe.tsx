@@ -329,9 +329,11 @@ function ConflictMarker({ conflict, onSelect, onHoverCountry }: ConflictMarkerPr
 interface GlobeSceneProps {
   conflicts: Conflict[];
   onSelectConflict: (c: Conflict) => void;
+  selectedCountry?: string;
+  accentColor: string;
 }
 
-function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
+function GlobeScene({ conflicts, onSelectConflict, selectedCountry, accentColor }: GlobeSceneProps) {
   const spreadConflicts = useMemo(() => offsetConflicts(conflicts), [conflicts]);
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const [hoveredSeverity, setHoveredSeverity] = useState<string>('low');
@@ -354,7 +356,7 @@ function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
         <SpaceBackdrop />
         <EarthMesh />
         <AtmosphereGlow />
-        <CountryHighlight country={hoveredCountry} color={severityColor(hoveredSeverity)} />
+        <CountryHighlight country={hoveredCountry || selectedCountry || null} color={hoveredCountry ? severityColor(hoveredSeverity) : accentColor} />
         {spreadConflicts.map((c) => (
           <ConflictMarker
             key={c.event_id}
@@ -383,13 +385,15 @@ function GlobeScene({ conflicts, onSelectConflict }: GlobeSceneProps) {
 interface ConflictGlobeProps {
   conflicts: Conflict[];
   onSelectConflict: (c: Conflict) => void;
+  selectedCountry?: string;
+  accentColor: string;
 }
 
-export default function ConflictGlobe({ conflicts, onSelectConflict }: ConflictGlobeProps) {
+export default function ConflictGlobe({ conflicts, onSelectConflict, selectedCountry, accentColor }: ConflictGlobeProps) {
   return (
     <div className="w-full h-full min-h-[400px]">
       <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-        <GlobeScene conflicts={conflicts} onSelectConflict={onSelectConflict} />
+        <GlobeScene conflicts={conflicts} onSelectConflict={onSelectConflict} selectedCountry={selectedCountry} accentColor={accentColor} />
       </Canvas>
     </div>
   );
