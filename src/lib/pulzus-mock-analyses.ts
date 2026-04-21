@@ -1,4 +1,4 @@
-// PULZUS — Valóság Ellenőr mock adatok
+// PULZUS — Szonda mock adatok
 // 4 propaganda cikk + 1 normál referencia cikk
 // Beilleszthető: fact-check.ts vagy egy külön mockData.ts fájlba
 

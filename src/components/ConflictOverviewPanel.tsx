@@ -62,7 +62,7 @@ export default function ConflictOverviewPanel({
 }: ConflictOverviewPanelProps) {
   const { t, countryCode } = useCountry();
   return (
-    <div className="glass-panel h-full min-h-[420px] p-4 sm:p-6 overflow-hidden flex flex-col">
+    <div className="glass-panel h-full min-h-[420px] xl:min-h-0 p-4 sm:p-6 overflow-hidden flex flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground break-words">{t('conflicts.activeZones')}</div>

@@ -32,10 +32,10 @@ function IndexContent() {
   const effectiveConflicts = conflicts;
 
   return (
-    <div className="min-h-screen bg-background relative" style={themeStyle as CSSProperties}>
+    <div className="min-h-screen lg:h-dvh bg-background relative flex flex-col lg:overflow-hidden" style={themeStyle as CSSProperties}>
       <ParticleBackground />
 
-      <header className="relative z-10 bg-[#0D0D0D] text-[#F2EDE4] border-b border-[#333333]">
+      <header className="relative z-10 shrink-0 bg-[#0D0D0D] text-[#F2EDE4] border-b border-[#333333]">
         <div className="px-4 py-3 sm:px-6 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6">
           <h1 className="font-display text-xl sm:text-2xl font-extrabold uppercase tracking-[0.16em] text-[#F2EDE4]">
             PULZUS
@@ -66,7 +66,7 @@ function IndexContent() {
       </header>
 
       {(view === 'globe' || view === 'markets') && (
-        <div className="relative z-10 px-4 pt-4 sm:px-6 sm:pt-8">
+        <div className="relative z-10 shrink-0 px-4 pt-4 sm:px-6 sm:pt-5 lg:pt-4">
           {view === 'markets' ? (
             <MarketTicker articles={articles} />
           ) : (
@@ -75,17 +75,17 @@ function IndexContent() {
         </div>
       )}
 
-      <main className="relative z-10 px-4 py-6 sm:px-6 sm:py-10 lg:py-12">
+      <main className="relative z-10 flex-1 min-h-0 px-4 py-4 sm:px-6 sm:py-6 lg:py-4 overflow-hidden">
 
         {view === 'globe' && (
-          <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)_340px] 2xl:grid-cols-[400px_minmax(0,1fr)_380px] gap-4 sm:gap-6 xl:h-[calc(100vh-208px)]">
+          <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)_340px] 2xl:grid-cols-[400px_minmax(0,1fr)_380px] gap-4 sm:gap-6 h-full min-h-0">
             <section className="min-h-0 h-full order-2 xl:order-1">
               <NewsPanel articles={articles} loading={articlesLoading} onOpenChat={setChatArticle} />
             </section>
 
             <section className="min-h-0 h-full order-1 xl:order-2">
               <div
-                className="overflow-hidden relative h-[420px] sm:h-[520px] xl:h-full min-h-[420px] bg-[#111111] border-[3px]"
+                className="overflow-hidden relative h-[360px] sm:h-[460px] xl:h-full min-h-[360px] xl:min-h-0 bg-[#111111] border-[3px]"
                 style={{
                   borderColor: 'var(--country-accent)',
                   boxShadow: `0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(var(--country-accent-rgb),0.28)`,
@@ -119,7 +119,7 @@ function IndexContent() {
         )}
 
         {view === 'markets' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 xl:h-[calc(100vh-208px)] min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 h-full min-h-0">
             <section className="min-h-0 h-full">
               <HungarianEconomyPanel />
             </section>

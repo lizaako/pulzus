@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { adaptCountryReference, replaceWithMap, useCountry, type CountryCode } from '@/lib/country-context';
 
 const DEMO_LINKS = Object.keys(MOCK_ANALYSES);
+const ANALYSIS_DELAY_MS = import.meta.env.MODE === 'test' ? 0 : 6000;
 
 const verdictStyles: Record<Verdict, { label: string; tone: string; badge: string; icon: typeof CheckCircle2 }> = {
   IGAZOLT: {
@@ -240,13 +241,23 @@ export default function RealityCheckPanel() {
   const [inputValue, setInputValue] = useState('');
   const [result, setResult] = useState<FactCheckResult | null>(null);
   const [showUnknown, setShowUnknown] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [portalDetailsOpen, setPortalDetailsOpen] = useState(false);
   const [feedbackState, setFeedbackState] = useState<'idle' | 'negative-select' | 'submitted'>('idle');
   const [feedbackReason, setFeedbackReason] = useState('');
 
   async function handleCheck() {
     const trimmed = inputValue.trim();
-    if (!trimmed) return;
+    if (!trimmed || isAnalyzing) return;
+
+    setIsAnalyzing(true);
+    setResult(null);
+    setShowUnknown(false);
+    setPortalDetailsOpen(false);
+    setFeedbackState('idle');
+    setFeedbackReason('');
+
+    await new Promise((resolve) => setTimeout(resolve, ANALYSIS_DELAY_MS));
 
     const nextResult = await checkFact(trimmed);
     setResult(nextResult);
@@ -254,6 +265,7 @@ export default function RealityCheckPanel() {
     setPortalDetailsOpen(false);
     setFeedbackState('idle');
     setFeedbackReason('');
+    setIsAnalyzing(false);
   }
 
   function handleExamplePick(url: string) {
@@ -313,11 +325,11 @@ export default function RealityCheckPanel() {
                 <Button
                   type="button"
                   onClick={() => void handleCheck()}
-                  disabled={!inputValue.trim()}
+                  disabled={!inputValue.trim() || isAnalyzing}
                   className="rounded-none px-6 text-xs font-bold uppercase tracking-[0.24em] text-[#F2EDE4]"
                   style={{ backgroundColor: 'var(--country-accent)' }}
                 >
-                  {t('reality.open')}
+                  {isAnalyzing ? 'Elemzés...' : t('reality.open')}
                 </Button>
               </div>
             </div>
@@ -341,7 +353,22 @@ export default function RealityCheckPanel() {
           </div>
 
           <div className="border-t border-[#333333] px-6 py-6 sm:px-8">
-            {!result ? (
+            {isAnalyzing ? (
+              <div className="border border-[#333333] bg-[#151515] px-6 py-8 text-center" style={{ boxShadow: '0 0 0 1px rgba(var(--country-accent-rgb),0.12)' }}>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[#333333] bg-[#111111]">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#444444] border-t-[var(--country-accent)]" />
+                </div>
+                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--country-accent)]">
+                  Elemzés folyamatban
+                </p>
+                <p className="mt-3 animate-pulse text-base text-[#F2EDE4]/76">
+                  Források, narratívák és pszichológiai minták feldolgozása...
+                </p>
+                <p className="mt-2 text-sm text-[#F2EDE4]/48">
+                  Ez általában néhány másodpercet vesz igénybe.
+                </p>
+              </div>
+            ) : !result ? (
               <div className="min-h-[80px]" />
             ) : (
               <div className="space-y-6">

@@ -122,7 +122,7 @@ const UI_TRANSLATIONS = {
   hu: {
     'nav.globe': 'ÁTTEKINTÉS',
     'nav.markets': 'PIACOK',
-    'nav.reality': 'VALÓSÁG ELLENŐR',
+    'nav.reality': 'SZONDA',
     'ticker.latest': 'Friss hírek',
     'export.pdf': 'Export PDF',
     'export.country': 'Ország',
@@ -163,7 +163,7 @@ const UI_TRANSLATIONS = {
     'conflicts.articles': 'Cikkek',
     'conflicts.victims': 'Áldozat',
     'conflicts.empty': 'Jelenleg nincs elég erős, friss konfliktusjel ahhoz, hogy aktív zónaként megjelenjen.',
-    'reality.header': 'Valóság Ellenőr',
+    'reality.header': 'Szonda',
     'reality.description': 'Illessz be egy cikklinket, és a panel megmutatja az ítéletet, a forrásminőséget, a pszichológiai eszközöket és a narratívakontextust.',
     'reality.input': 'Cikklink',
     'reality.placeholder': 'Illessz be egy cikklinket az elemzéshez',
