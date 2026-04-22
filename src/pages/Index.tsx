@@ -32,7 +32,7 @@ function IndexContent() {
   const effectiveConflicts = conflicts;
 
   return (
-    <div className="min-h-screen lg:h-dvh bg-background relative flex flex-col lg:overflow-hidden" style={themeStyle as CSSProperties}>
+    <div className="relative flex h-[100dvh] min-h-screen flex-col overflow-hidden bg-background" style={themeStyle as CSSProperties}>
       <ParticleBackground />
 
       <header className="relative z-10 shrink-0 bg-[#0D0D0D] text-[#F2EDE4] border-b border-[#333333]">
@@ -75,7 +75,7 @@ function IndexContent() {
         </div>
       )}
 
-      <main className="relative z-10 flex-1 min-h-0 px-4 py-4 sm:px-6 sm:py-6 lg:py-4 overflow-hidden">
+      <main className="relative z-10 flex-1 min-h-0 overflow-hidden px-4 py-4 sm:px-6 sm:py-6 lg:py-4">
 
         {view === 'globe' && (
           <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)_340px] 2xl:grid-cols-[400px_minmax(0,1fr)_380px] gap-4 sm:gap-6 h-full min-h-0">
@@ -130,13 +130,13 @@ function IndexContent() {
         )}
 
         {view === 'media' && (
-          <section>
+          <section className="h-full min-h-0 overflow-hidden">
             <MediaLensPanel articles={articles} />
           </section>
         )}
 
         {view === 'reality-check' && (
-          <section>
+          <section className="h-full min-h-0 overflow-hidden">
             <RealityCheckPanel />
           </section>
         )}

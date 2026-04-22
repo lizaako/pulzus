@@ -294,8 +294,8 @@ export default function RealityCheckPanel() {
 
   return (
     <TooltipProvider>
-      <section className="mx-auto max-w-7xl">
-        <div className="border border-[#333333] bg-[#111111]/95 shadow-[0_2px_8px_rgba(0,0,0,0.18)]">
+      <section className="mx-auto flex h-full min-h-0 max-w-7xl flex-col">
+        <div className="flex min-h-0 flex-1 flex-col border border-[#333333] bg-[#111111]/95 shadow-[0_2px_8px_rgba(0,0,0,0.18)]">
           <div className="border-b border-[#333333] px-6 py-6 sm:px-8">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--country-accent)]">
               {t('reality.header')}
@@ -308,70 +308,71 @@ export default function RealityCheckPanel() {
             </p>
           </div>
 
-          <div className="px-6 py-6 sm:px-8">
-            <label htmlFor="reality-check-input" className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#F2EDE4]/60">
-              {t('reality.input')}
-            </label>
-            <Textarea
-              id="reality-check-input"
-              value={inputValue}
-              onChange={(event) => setInputValue(event.target.value)}
-              placeholder={t('reality.placeholder')}
-              className="mt-4 min-h-[160px] rounded-none border-[#333333] bg-[#151515] px-5 py-4 text-base leading-7 text-[#F2EDE4] placeholder:text-[#F2EDE4]/32 focus-visible:ring-0"
-            />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="px-6 py-6 sm:px-8">
+              <label htmlFor="reality-check-input" className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#F2EDE4]/60">
+                {t('reality.input')}
+              </label>
+              <Textarea
+                id="reality-check-input"
+                value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                placeholder={t('reality.placeholder')}
+                className="mt-4 min-h-[160px] rounded-none border-[#333333] bg-[#151515] px-5 py-4 text-base leading-7 text-[#F2EDE4] placeholder:text-[#F2EDE4]/32 focus-visible:ring-0"
+              />
 
-            <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  onClick={() => void handleCheck()}
-                  disabled={!inputValue.trim() || isAnalyzing}
-                  className="rounded-none px-6 text-xs font-bold uppercase tracking-[0.24em] text-[#F2EDE4]"
-                  style={{ backgroundColor: 'var(--country-accent)' }}
-                >
-                  {isAnalyzing ? 'Elemzés...' : t('reality.open')}
-                </Button>
+              <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => void handleCheck()}
+                    disabled={!inputValue.trim() || isAnalyzing}
+                    className="rounded-none px-6 text-xs font-bold uppercase tracking-[0.24em] text-[#F2EDE4]"
+                    style={{ backgroundColor: 'var(--country-accent)' }}
+                  >
+                    {isAnalyzing ? 'Elemzés...' : t('reality.open')}
+                  </Button>
+                </div>
               </div>
+
+              {showUnknown && (
+                <div className="mt-6 border border-[#444444] bg-[#171717] px-5 py-5 text-[#F2EDE4]/78">
+                  <div className="flex items-start gap-3">
+                    <ShieldQuestion className="mt-0.5 h-5 w-5 shrink-0 text-[#A1A1AA]" />
+                    <div>
+                      <p className="text-base font-semibold text-[#F2EDE4]">
+                        {t('reality.unavailable')}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[#F2EDE4]/68">
+                        {t('reality.tryAnother')}
+                      </p>
+                    </div>
+                  </div>
+                  <ExampleLinks onPick={handleExamplePick} />
+                </div>
+              )}
             </div>
 
-            {showUnknown && (
-              <div className="mt-6 border border-[#444444] bg-[#171717] px-5 py-5 text-[#F2EDE4]/78">
-                <div className="flex items-start gap-3">
-                  <ShieldQuestion className="mt-0.5 h-5 w-5 shrink-0 text-[#A1A1AA]" />
-                  <div>
-                    <p className="text-base font-semibold text-[#F2EDE4]">
-                      {t('reality.unavailable')}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[#F2EDE4]/68">
-                      {t('reality.tryAnother')}
-                    </p>
+            <div className="border-t border-[#333333] px-6 py-6 sm:px-8">
+              {isAnalyzing ? (
+                <div className="border border-[#333333] bg-[#151515] px-6 py-8 text-center" style={{ boxShadow: '0 0 0 1px rgba(var(--country-accent-rgb),0.12)' }}>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[#333333] bg-[#111111]">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#444444] border-t-[var(--country-accent)]" />
                   </div>
+                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--country-accent)]">
+                    Elemzés folyamatban
+                  </p>
+                  <p className="mt-3 animate-pulse text-base text-[#F2EDE4]/76">
+                    Források, narratívák és pszichológiai minták feldolgozása...
+                  </p>
+                  <p className="mt-2 text-sm text-[#F2EDE4]/48">
+                    Ez általában néhány másodpercet vesz igénybe.
+                  </p>
                 </div>
-                <ExampleLinks onPick={handleExamplePick} />
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-[#333333] px-6 py-6 sm:px-8">
-            {isAnalyzing ? (
-              <div className="border border-[#333333] bg-[#151515] px-6 py-8 text-center" style={{ boxShadow: '0 0 0 1px rgba(var(--country-accent-rgb),0.12)' }}>
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[#333333] bg-[#111111]">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#444444] border-t-[var(--country-accent)]" />
-                </div>
-                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--country-accent)]">
-                  Elemzés folyamatban
-                </p>
-                <p className="mt-3 animate-pulse text-base text-[#F2EDE4]/76">
-                  Források, narratívák és pszichológiai minták feldolgozása...
-                </p>
-                <p className="mt-2 text-sm text-[#F2EDE4]/48">
-                  Ez általában néhány másodpercet vesz igénybe.
-                </p>
-              </div>
-            ) : !result ? (
-              <div className="min-h-[80px]" />
-            ) : (
-              <div className="space-y-6">
+              ) : !result ? (
+                <div className="min-h-[80px]" />
+              ) : (
+                <div className="space-y-6">
                 <div className="border border-[#333333] bg-[#151515] p-6" style={{ boxShadow: '0 0 0 1px rgba(var(--country-accent-rgb),0.12)' }}>
                   <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_360px]">
                     <div>
@@ -692,8 +693,9 @@ export default function RealityCheckPanel() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#F2EDE4]/50">Elhallgatott kontextus</p>
                   <p className="mt-4 text-sm leading-7 text-[#F2EDE4]/76">{result.omitted_context}</p>
                 </div>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>

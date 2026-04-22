@@ -1,5 +1,5 @@
 // PULZUS — Szonda mock adatok
-// 4 propaganda cikk + 1 normál referencia cikk
+// 4 propaganda cikk + 1 normál referencia cikk + 1 penzugyi clickbait pelda
 // Beilleszthető: fact-check.ts vagy egy külön mockData.ts fájlba
 
 export type Verdict = "IGAZOLT" | "CÁFOLT" | "TORZÍTOTT";
@@ -605,6 +605,116 @@ export const analysis_5: FactCheckResult = {
   },
 };
 
+// ──────────────────────────────────────────────────────────────────────────────────────
+// CIKK 6 — Pénzcentrum: „Megszólaltak a tőzsdeguruk: ilyen részvényeket kell venni"
+// ──────────────────────────────────────────────────────────────────────────────────────
+export const analysis_6: FactCheckResult = {
+  id: "mock-006",
+  url: "https://www.penzcentrum.hu/vilag/20251127/megszolaltak-a-tozsdeguruk-ilyen-reszvenyeket-kell-most-venni-ha-valaki-nagyot-akar-kaszalni-1189422",
+  submitted_at: "2026-04-20T10:25:00Z",
+  verdict: "TORZÍTOTT",
+  confidence: 74,
+  explanation:
+    "A cikk valós, ellenőrizhető adatokat közöl a JP Morgan ajánlásáról és a kínai részvénypiacról, azonban a cím súlyosan félrevezető: a 'tőzsdeguruk' kifejezés és a 'nagyot akar kaszálni' framing egy szakmai elemzői ajánlást kockázatmentes nyerési lehetőségként pozicionál. A JP Morgan ajánlása maga is tartalmaz fenntartásokat és kockázatokat, amelyek a cikkből szinte teljesen hiányoznak. A 15%-os növekedési előrejelzés az MSCI Ázsia ex-Japán indexre vonatkozik, nem egyedi részvényekre; ezt a különbséget a cikk nem hangsúlyozza. Pénzügyi tartalmak esetén ez a fajta leegyszerűsítés és kockázatelhallgatás potenciálisan káros olvasói döntésekhez vezethet.",
+  portal_rating: {
+    domain: "penzcentrum.hu",
+    credibility: 58,
+    bias: "center-financial-clickbait",
+    why_trusted_or_not:
+      "A Pénzcentrum egy független, kereskedelmi pénzügyi hírportál. Alapvetően nem politikai propagandát közöl, azonban bevételi modellje erősen épít a kattintásvezérelt tartalomra. Az MBFC és hasonló adatbázisokban nincs besorolva, de a pénzügyi újságírás etikai standardjai szerint a kockázatok elhallgatása és a 'nagyot kaszálni' típusú clickbait headline-ok problémásak. Nem rosszhiszemű portál, de anyagi motivációja van a szenzációs tálalásra.",
+  },
+  headline_analysis: {
+    original: "Megszólaltak a tőzsdeguruk: ilyen részvényeket kell most venni, ha valaki nagyot akar kaszálni",
+    clickbait_score: 86,
+    accuracy_score: 34,
+    psychological_hook: "Tekintélyre hivatkozás ('guruk') + Azonnaliság ('most') + Nyereségvágy aktiválása",
+    vs_body_summary:
+      "A cím 'tőzsdegurukat' és konkrét részvényvásárlási tanácsot ígér. A cikk valójában egyetlen bank (JP Morgan) egy indexre vonatkozó, feltételes módú elemzői ajánlását tartalmazza, amelyet egy hírügynökségi összefoglaló alapján közöl. Sem 'guruk' (többes szám), sem konkrét részvényajánlás nincs a cikkben.",
+    missing_context:
+      "Teljesen hiányzik: (1) a befektetés kockázatára való figyelmeztetés; (2) hogy a JP Morgan érdekelt lehet a kínai piac felpumpálásában; (3) hogy az indexajánlás nem egyenlő egyedi részvényvásárlási tanáccsal; (4) hogy a kínai piac politikai kockázatai (szabályozói beavatkozás, geopolitikai feszültség) jelentősek.",
+  },
+  psychological_quotes: [
+    {
+      quote: "nagyobb esély van a jelentős hozamra, mint a számottevő veszteségekre",
+      technique: "Selective framing + Loss aversion reversal",
+      emotional_target: "bizonytalanság",
+      analysis:
+        "Ez a mondat technikailag igaz lehet, de pszichológiailag a veszteség lehetőségét minimalizálja. Az olvasó azt viszi magával, hogy 'valószínűleg nyerni fogok', holott egy 51-49%-os esélykülönbség is teljesíti ezt az állítást.",
+    },
+    {
+      quote: "vonzó beszállási pontot teremt a befektetők számára",
+      technique: "FOMO trigger + Authority laundering",
+      emotional_target: "bizonytalanság",
+      analysis:
+        "A 'vonzó beszállási pont' egy banki elemzői zsargon, amely az olvasóban azt a benyomást kelti, hogy most kell cselekedni, különben lemarad. Ez a FOMO (fear of missing out) klasszikus pénzügyi alkalmazása.",
+    },
+    {
+      quote: "több támogató tényező is megjelenhet, köztük a mesterséges intelligencia elterjedése",
+      technique: "Buzzword stacking + Optimism bias exploitation",
+      emotional_target: "büszkeség",
+      analysis:
+        "Az AI-hivatkozás 2024-2025-ben automatikus hitelességnövelő eszközzé vált, bármilyen befektetési tézisbe beleszőve pozitív asszociációkat aktivál az olvasóban, függetlenül a valódi relevanciától.",
+    },
+  ],
+  psychological_conclusion:
+    "A cikk a pénzügyi clickbait egyik legtisztább példája: valós adatot vesz alapul, de a tálalás minden eleme a nyereségvágy és a kimaradástól való félelem kombinált aktiválására irányul. Ez nem politikai propaganda, hanem kereskedelmi manipuláció - a cél nem vélemény befolyásolása, hanem kattintás és olvasói elköteleződés maximalizálása. A hatás azonban hasonlóan káros lehet: megalapozatlan pénzügyi döntésekhez vezet.",
+  manipulation_index: {
+    clickbait: 86,
+    emotional_amplification: 71,
+    omitted_context: 82,
+    false_urgency: 78,
+    misleading_framing: 75,
+    overall: 78,
+    dominant_technique: "FOMO trigger + kockázatelhallgatás",
+  },
+  sources: [
+    {
+      url: "https://www.bloomberg.com",
+      domain: "bloomberg.com",
+      credibility: 88,
+      bias: "center-financial",
+      label: "Bloomberg - megbízható pénzügyi hírforrás",
+      stance: "MIXED",
+      summary:
+        "A cikk a Bloombergre hivatkozik mint eredeti forrásra, amely valóban közölte a JP Morgan ajánlást. A Bloomberg eredeti cikke azonban valószínűleg részletesebb kockázati figyelmeztetéseket tartalmazott, amelyek a Pénzcentrum összefoglalójából kimaradtak.",
+    },
+    {
+      url: "https://www.msci.com",
+      domain: "msci.com",
+      credibility: 92,
+      bias: "neutral-financial-index",
+      label: "MSCI - indexszolgáltató",
+      stance: "SUPPORTS",
+      summary:
+        "Az MSCI China index valóban esett 6,2%-ot a hivatkozott negyedévben - ez az adat ellenőrizhető és helyes.",
+    },
+  ],
+  omitted_context:
+    "Hiányzik: (1) kötelező kockázati figyelmeztetés ('a múltbeli hozam nem garantálja a jövőbelit'); (2) a JP Morgan saját érdekeltségei a kínai piacon; (3) Kína szabályozói kockázatai (az Alibaba, Didi és más cégek elleni korábbi kormányzati lépések); (4) a geopolitikai kockázat (tajvani feszültség, szankciók lehetősége); (5) az index vs. egyedi részvény különbsége.",
+  target_audience: {
+    primary_target: "Pénzügyileg aktív, de nem professzionális befektetők, különösen 30-50 éves urbánus olvasók",
+    exploited_fears: [
+      "Kimaradástól való félelem (FOMO)",
+      "Inflációtól és megtakarítások elértéktelenedésétől való félelem",
+    ],
+    assumed_prejudices: [
+      "A nagy bankok elemzői tudják, mi fog történni",
+      "Aki nem fektet be, az veszít",
+      "Az AI-kapcsolatos befektetések biztonságosak",
+    ],
+    conclusion:
+      "A cikk elsősorban azokat célozza, akik szeretnének befektetni, de nem rendelkeznek mélyebb pénzügyi ismeretekkel. A 'guruk' tekintélyére és a 'most kell cselekedni' üzenetre fogékonyak.",
+  },
+  narrative_chain: {
+    first_seen: "2025-11-27",
+    appearances: 3,
+    domains: ["penzcentrum.hu", "portfolio.hu", "mfor.hu"],
+    mutation_summary:
+      "A JP Morgan kínai részvényajánlása több magyar pénzügyi portálon is megjelent ugyanazon a napon Bloomberg-összefoglaló alapján. A Pénzcentrum verziója a legszenzációsabb cím választásával tűnik ki, a többi portál mérsékeltebb, kockázatokat is megemlítő módon közölte ugyanazt az információt.",
+    coordination_level: "Párhuzamos megjelenés",
+  },
+};
+
 // ─────────────────────────────────────────
 // Exportálható összesített mock adatbázis
 // ─────────────────────────────────────────
@@ -614,6 +724,7 @@ export const MOCK_ANALYSES: Record<string, FactCheckResult> = {
   "https://www.origo.hu/belpol/2026/04/magyar-peter-tisza-part-energiaterv-csercsa-balazs": analysis_3,
   "https://magyarnemzet.hu/poszt-trauma/2026/04/magyar-peter-kormany-tisza-akkumulator-gyar": analysis_4,
   "https://telex.hu/g7/vallalat/2026/04/20/budapest-belgrad-kelebia-vasutvonal-tehervonatok-szemelyszallitas-etcs": analysis_5,
+  "https://www.penzcentrum.hu/vilag/20251127/megszolaltak-a-tozsdeguruk-ilyen-reszvenyeket-kell-most-venni-ha-valaki-nagyot-akar-kaszalni-1189422": analysis_6,
 };
 
 // Használat a fact-check.ts-ben:
