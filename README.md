@@ -95,12 +95,13 @@ npm run dev
 Built independently by a 16-year-old software development student at Biatorbágyi Innovatív Technikum.  
 **1st place** at the school's startup competition, judged by executives from Foxpost, CTP Hungary, Vantage Towers, and Provident.
 
-# PULZUS
+# PULZUS(MAGYAR)
 
 > AI-alapú hírintelligencia platform — automatizált hírgyűjtés, konfliktustérkép, hangulatelemzés és fact-check valós idejű dashboardon.
 
-![Dashboard](screenshots/dashboard.png)
-![Fact-check](screenshots/factcheck.png)
+
+[![Dashboard](screenshots/dashboard.png)](https://github.com/lizaako/pulzus/blob/main/fo.png)
+[![Fact-check](screenshots/factcheck.png)](https://github.com/lizaako/pulzus/blob/main/elemzes.png)
 
 ---
 
@@ -169,7 +170,7 @@ Illessz be egy cikklinket. A rendszer visszaadja:
 ## Telepítés
 
 ```bash
-git clone https://github.com/[felhasználónév]/pulzus
+git clone https://github.com/lizaako/pulzus
 cd pulzus
 npm install
 ```
