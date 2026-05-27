@@ -2,8 +2,8 @@
  
 > AI-powered news intelligence platform — automated ingestion, conflict mapping, sentiment analysis, and fact-checking in a real-time dashboard.
  
-![Dashboard](screenshots/dashboard.png)
-![Fact-check](screenshots/factcheck.png)
+[![Dashboard](screenshots/dashboard.png)](https://github.com/lizaako/pulzus/blob/main/fo.png)
+[![Fact-check](screenshots/factcheck.png)](https://github.com/lizaako/pulzus/blob/main/elemzes.png)
  
 ---
  
