@@ -217,7 +217,8 @@ function shouldRetryWithBaseArticle(error: unknown): boolean {
 
   return haystack.includes('schema cache')
     || haystack.includes('could not find')
-    || haystack.includes('column');
+    || haystack.includes('column')
+    || haystack.includes('bad request');
 }
 
 async function fetchArticleTitle(url: string): Promise<string> {

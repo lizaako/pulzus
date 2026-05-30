@@ -17,6 +17,7 @@ const RSS_FEEDS = [
   { url: 'https://feeds.ft.com/ft/rss/home', fallback: 'http://feeds.ft.com/ft/rss/home', source: 'Financial Times' },
   { url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'Bloomberg Markets' },
 ];
+const URL_LOOKUP_CHUNK_SIZE = 25;
 
 interface ArticleRow {
   title: string;
@@ -101,7 +102,45 @@ function shouldRetryWithBaseArticle(error: unknown): boolean {
 
   return haystack.includes('schema cache')
     || haystack.includes('could not find')
-    || haystack.includes('column');
+    || haystack.includes('column')
+    || haystack.includes('bad request');
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+
+  return chunks;
+}
+
+async function fetchExistingUrls(supabase: ReturnType<typeof createClient>, urls: string[]): Promise<Set<string>> {
+  const existingUrls = new Set<string>();
+
+  for (const chunk of chunkArray(urls, URL_LOOKUP_CHUNK_SIZE)) {
+    const { data: existingArticles, error: existingError } = await supabase
+      .from('articles')
+      .select('url')
+      .in('url', chunk);
+
+    if (existingError) {
+      console.error('RSS ingest: duplicate URL lookup failed', {
+        chunkSize: chunk.length,
+        firstUrl: chunk[0],
+        error: serializeError(existingError),
+      });
+      throw existingError;
+    }
+
+    for (const item of existingArticles || []) {
+      if (typeof item.url === 'string') {
+        existingUrls.add(item.url);
+      }
+    }
+  }
+
+  return existingUrls;
 }
 
 async function fetchFeedXml(url: string, fallbackUrl?: string): Promise<string> {
@@ -214,16 +253,7 @@ Deno.serve(async (req) => {
     const urls = candidates.map((article) => article.url);
     console.log(`RSS ingest: ${candidates.length} unique candidate article(s) across all feeds`);
 
-    let existingUrls = new Set<string>();
-    if (urls.length > 0) {
-      const { data: existingArticles, error: existingError } = await supabase
-        .from('articles')
-        .select('url')
-        .in('url', urls);
-
-      if (existingError) throw existingError;
-      existingUrls = new Set((existingArticles || []).map((item: { url: string }) => item.url));
-    }
+    const existingUrls = urls.length > 0 ? await fetchExistingUrls(supabase, urls) : new Set<string>();
 
     const newArticles = candidates.filter((article) => !existingUrls.has(article.url));
     console.log(`RSS ingest: inserting ${newArticles.length} new article(s), skipping ${candidates.length - newArticles.length} duplicate(s)`);
