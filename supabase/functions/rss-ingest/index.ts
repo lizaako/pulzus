@@ -17,7 +17,7 @@ const RSS_FEEDS = [
   { url: 'https://feeds.ft.com/ft/rss/home', fallback: 'http://feeds.ft.com/ft/rss/home', source: 'Financial Times' },
   { url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'Bloomberg Markets' },
 ];
-const URL_LOOKUP_CHUNK_SIZE = 25;
+const MAX_ARTICLES_PER_RUN = 80;
 
 interface ArticleRow {
   title: string;
@@ -249,38 +249,79 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const candidates = Array.from(articleMap.values());
-    const urls = candidates.map((article) => article.url);
+    const candidates = Array.from(articleMap.values())
+      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+      .slice(0, MAX_ARTICLES_PER_RUN);
     console.log(`RSS ingest: ${candidates.length} unique candidate article(s) across all feeds`);
 
-    const existingUrls = urls.length > 0 ? await fetchExistingUrls(supabase, urls) : new Set<string>();
+    let inserted = 0;
+    let duplicatesSkipped = 0;
+    let insertFailures = 0;
 
-    const newArticles = candidates.filter((article) => !existingUrls.has(article.url));
-    console.log(`RSS ingest: inserting ${newArticles.length} new article(s), skipping ${candidates.length - newArticles.length} duplicate(s)`);
+    for (const article of candidates) {
+      const { data: existingArticle, error: existingError } = await supabase
+        .from('articles')
+        .select('id')
+        .eq('url', article.url)
+        .maybeSingle();
 
-    if (newArticles.length > 0) {
+      if (existingError) {
+        console.error('RSS ingest: duplicate check failed', {
+          url: article.url,
+          error: serializeError(existingError),
+        });
+        insertFailures += 1;
+        continue;
+      }
+
+      if (existingArticle) {
+        duplicatesSkipped += 1;
+        continue;
+      }
+
       const { error: insertError } = await supabase
         .from('articles')
-        .insert(newArticles);
+        .insert(article);
 
-      if (insertError) {
-        if (!shouldRetryWithBaseArticle(insertError)) {
-          throw insertError;
-        }
-
-        console.warn('RSS ingest: retrying insert with base article columns only', serializeError(insertError));
-        const { error: fallbackInsertError } = await supabase
-          .from('articles')
-          .insert(newArticles.map(stripOptionalArticleFields));
-
-        if (fallbackInsertError) throw fallbackInsertError;
+      if (!insertError) {
+        inserted += 1;
+        continue;
       }
+
+      if (!shouldRetryWithBaseArticle(insertError)) {
+        console.error('RSS ingest: article insert failed', {
+          url: article.url,
+          error: serializeError(insertError),
+        });
+        insertFailures += 1;
+        continue;
+      }
+
+      console.warn('RSS ingest: retrying insert with base article columns only', {
+        url: article.url,
+        error: serializeError(insertError),
+      });
+      const { error: fallbackInsertError } = await supabase
+        .from('articles')
+        .insert(stripOptionalArticleFields(article));
+
+      if (fallbackInsertError) {
+        console.error('RSS ingest: fallback article insert failed', {
+          url: article.url,
+          error: serializeError(fallbackInsertError),
+        });
+        insertFailures += 1;
+        continue;
+      }
+
+      inserted += 1;
     }
 
     return new Response(JSON.stringify({
       fetched: candidates.length,
-      inserted: newArticles.length,
-      duplicatesSkipped: candidates.length - newArticles.length,
+      inserted,
+      duplicatesSkipped,
+      insertFailures,
       feedErrors,
     }), {
       status: 200,

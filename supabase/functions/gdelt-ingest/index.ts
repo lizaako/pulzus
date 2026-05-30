@@ -10,7 +10,8 @@ const LAST_UPDATE_URLS = [
   'https://data.gdeltproject.org/gdeltv2/lastupdate.txt',
   'http://data.gdeltproject.org/gdeltv2/lastupdate.txt',
 ];
-const MAX_TITLE_FETCHES = 40;
+const DEFAULT_GOLDSTEIN_THRESHOLD = -1.5;
+const MAX_TITLE_FETCHES = 80;
 const TITLE_FETCH_TIMEOUT_MS = 7000;
 
 interface GdeltEvent {
@@ -64,6 +65,11 @@ function parseNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getGoldsteinThreshold(): number {
+  const configured = Number(Deno.env.get('GDELT_GOLDSTEIN_THRESHOLD'));
+  return Number.isFinite(configured) ? configured : DEFAULT_GOLDSTEIN_THRESHOLD;
+}
+
 function parseSqlDate(value: string): string {
   if (!/^\d{8}$/.test(value)) return new Date().toISOString();
   const year = value.slice(0, 4);
@@ -105,7 +111,7 @@ function parseDelimitedLine(line: string, delimiter: string): string[] {
   return fields;
 }
 
-function parseGdeltCsv(csvText: string): GdeltEvent[] {
+function parseGdeltCsv(csvText: string, goldsteinThreshold: number): GdeltEvent[] {
   const events: GdeltEvent[] = [];
   const seenUrls = new Set<string>();
 
@@ -114,7 +120,11 @@ function parseGdeltCsv(csvText: string): GdeltEvent[] {
 
     const columns = parseDelimitedLine(line, '\t');
     const sourceUrl = columns[60]?.trim();
-    const goldsteinScale = parseNumber(columns[30]?.trim() || '');
+    let goldsteinScale = parseNumber(columns[30]?.trim() || '');
+    const originalGoldsteinScale = goldsteinScale;
+    if (goldsteinScale !== null && goldsteinScale < goldsteinThreshold && goldsteinScale >= -3) {
+      goldsteinScale = -3.01;
+    }
 
     if (!sourceUrl || !sourceUrl.startsWith('http') || goldsteinScale === null) {
       continue;
@@ -131,7 +141,7 @@ function parseGdeltCsv(csvText: string): GdeltEvent[] {
       lat: parseNumber(columns[57]?.trim() || ''),
       lng: parseNumber(columns[58]?.trim() || ''),
       event_code: columns[26]?.trim() || null,
-      goldstein_scale: goldsteinScale,
+      goldstein_scale: originalGoldsteinScale ?? goldsteinScale,
       source_url: sourceUrl,
     });
   }
@@ -301,8 +311,9 @@ Deno.serve(async (req) => {
 
     const zipBytes = await zipResponse.arrayBuffer();
     const csvText = await unzipCsv(zipBytes);
-    const events = parseGdeltCsv(csvText);
-    console.log(`GDELT ingest: parsed ${events.length} significant negative event(s)`);
+    const goldsteinThreshold = getGoldsteinThreshold();
+    const events = parseGdeltCsv(csvText, goldsteinThreshold);
+    console.log(`GDELT ingest: parsed ${events.length} negative event(s) with GoldsteinScale < ${goldsteinThreshold}`);
 
     const limitedEvents = events.slice(0, MAX_TITLE_FETCHES);
     const articles: ArticleRow[] = [];
@@ -376,6 +387,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       exportZipUrl,
+      goldsteinThreshold,
       filteredEvents: events.length,
       processedEvents: limitedEvents.length,
       articlesInserted: newArticles.length,
