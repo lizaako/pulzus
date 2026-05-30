@@ -6,7 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const LAST_UPDATE_URL = 'https://data.gdeltproject.org/gdeltv2/lastupdate.txt';
+const LAST_UPDATE_URLS = [
+  'https://data.gdeltproject.org/gdeltv2/lastupdate.txt',
+  'http://data.gdeltproject.org/gdeltv2/lastupdate.txt',
+];
 const MAX_TITLE_FETCHES = 40;
 const TITLE_FETCH_TIMEOUT_MS = 7000;
 
@@ -195,19 +198,33 @@ async function fetchArticleTitle(url: string): Promise<string> {
 }
 
 async function findLatestExportCsvZipUrl(): Promise<string> {
-  const response = await fetch(LAST_UPDATE_URL);
-  if (!response.ok) {
-    throw new Error(`GDELT lastupdate fetch failed with HTTP ${response.status}`);
+  const errors: Array<{ url: string; details: ReturnType<typeof serializeError> | { message: string } }> = [];
+
+  for (const url of LAST_UPDATE_URLS) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        errors.push({ url, details: { message: `HTTP ${response.status}` } });
+        continue;
+      }
+
+      const body = await response.text();
+      const match = body.match(/https?:\/\/\S+?\.export\.CSV\.zip/i);
+      if (!match) {
+        console.log(`GDELT lastupdate preview from ${url}: ${body.slice(0, 500)}`);
+        errors.push({ url, details: { message: 'No .export.CSV.zip URL found' } });
+        continue;
+      }
+
+      console.log(`GDELT ingest: using lastupdate endpoint ${url}`);
+      return match[0];
+    } catch (error) {
+      console.warn(`GDELT ingest: lastupdate fetch failed for ${url}`, serializeError(error));
+      errors.push({ url, details: serializeError(error) });
+    }
   }
 
-  const body = await response.text();
-  const match = body.match(/https?:\/\/\S+?\.export\.CSV\.zip/i);
-  if (!match) {
-    console.log(`GDELT lastupdate preview: ${body.slice(0, 500)}`);
-    throw new Error('No .export.CSV.zip URL found in GDELT lastupdate.txt');
-  }
-
-  return match[0];
+  throw new Error(`GDELT lastupdate fetch failed for all endpoints: ${JSON.stringify(errors)}`);
 }
 
 Deno.serve(async (req) => {
