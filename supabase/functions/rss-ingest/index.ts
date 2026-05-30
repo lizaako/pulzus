@@ -22,7 +22,6 @@ const MAX_ARTICLES_PER_RUN = 80;
 interface ArticleRow {
   title: string;
   url: string;
-  content: string | null;
   published_at: string;
   source: string;
   sentiment_score?: number;
@@ -195,7 +194,6 @@ async function fetchFeedArticles(feed: typeof RSS_FEEDS[number], parser: Parser)
     articles.push({
       title,
       url,
-      content: cleanText(item.contentSnippet) || cleanText(item.content) || cleanText(item.summary) || cleanText(item.description),
       published_at: asIsoDate(item.isoDate || item.pubDate),
       source: feed.source,
       sentiment_score: 0,

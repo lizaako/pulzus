@@ -27,7 +27,6 @@ interface GdeltEvent {
 interface ArticleRow {
   title: string;
   url: string;
-  content: string | null;
   published_at: string;
   source: string;
   sentiment_score?: number;
@@ -323,7 +322,6 @@ Deno.serve(async (req) => {
       articles.push({
         title,
         url: event.source_url,
-        content: null,
         published_at: event.event_date,
         source: 'GDELT',
         sentiment_score: Math.max(-1, event.goldstein_scale / 10),
