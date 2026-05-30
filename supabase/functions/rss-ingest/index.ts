@@ -18,6 +18,9 @@ const RSS_FEEDS = [
   { url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'Bloomberg Markets' },
 ];
 const MAX_ARTICLES_PER_RUN = 80;
+const MAX_ANALYZED_ARTICLES_PER_RUN = 20;
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_TIMEOUT_MS = 25000;
 
 interface ArticleRow {
   title: string;
@@ -30,6 +33,33 @@ interface ArticleRow {
   hungary_impact?: string;
   warning_level?: string;
   summary?: string;
+  conflict_event_type?: string | null;
+  conflict_country?: string | null;
+  conflict_location?: string | null;
+  conflict_latitude?: number | null;
+  conflict_longitude?: number | null;
+  conflict_fatalities?: number | null;
+  conflict_description?: string | null;
+  conflict_severity?: string | null;
+}
+
+interface AnalysisResult {
+  summary: string;
+  warning_level: 'high' | 'medium' | 'low';
+  sentiment_score: number;
+  topics: string[];
+  affects_hungary: boolean;
+  hungary_impact: string;
+  conflict?: {
+    event_type: string;
+    country: string;
+    location: string;
+    latitude: number;
+    longitude: number;
+    description: string;
+    severity: 'high' | 'medium' | 'low';
+    fatalities: number;
+  };
 }
 
 function serializeError(error: unknown) {
@@ -85,6 +115,14 @@ function stripOptionalArticleFields(article: ArticleRow) {
     hungary_impact: _hungaryImpact,
     warning_level: _warningLevel,
     summary: _summary,
+    conflict_event_type: _conflictEventType,
+    conflict_country: _conflictCountry,
+    conflict_location: _conflictLocation,
+    conflict_latitude: _conflictLatitude,
+    conflict_longitude: _conflictLongitude,
+    conflict_fatalities: _conflictFatalities,
+    conflict_description: _conflictDescription,
+    conflict_severity: _conflictSeverity,
     ...baseArticle
   } = article;
 
@@ -209,6 +247,132 @@ async function fetchFeedArticles(feed: typeof RSS_FEEDS[number], parser: Parser)
   return articles;
 }
 
+async function fetchWithTimeout(input: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(`Request timed out after ${timeoutMs}ms`), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function extractJsonObject(content: string): string {
+  const trimmed = content.trim();
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    return trimmed;
+  }
+
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim();
+  }
+
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+
+  return trimmed;
+}
+
+function normalizeAnalysis(article: ArticleRow, parsed: Partial<AnalysisResult>): ArticleRow {
+  const warningLevel = parsed.warning_level === 'high' || parsed.warning_level === 'medium'
+    ? parsed.warning_level
+    : 'low';
+  const sentimentScore = typeof parsed.sentiment_score === 'number'
+    ? Math.max(-1, Math.min(1, parsed.sentiment_score))
+    : 0;
+  const conflict = parsed.conflict && typeof parsed.conflict === 'object' ? parsed.conflict : undefined;
+
+  return {
+    ...article,
+    summary: parsed.summary?.trim() || article.summary || article.title,
+    warning_level: warningLevel,
+    sentiment_score: sentimentScore,
+    topics: Array.isArray(parsed.topics) ? parsed.topics.map((topic) => String(topic).trim()).filter(Boolean).slice(0, 4) : article.topics || [],
+    affects_hungary: Boolean(parsed.affects_hungary),
+    hungary_impact: parsed.hungary_impact?.trim() || article.hungary_impact || 'Nincs egyertelmu kozvetlen magyar hatas megjelolve.',
+    conflict_event_type: conflict?.event_type || null,
+    conflict_country: conflict?.country || null,
+    conflict_location: conflict?.location || null,
+    conflict_latitude: typeof conflict?.latitude === 'number' ? conflict.latitude : null,
+    conflict_longitude: typeof conflict?.longitude === 'number' ? conflict.longitude : null,
+    conflict_fatalities: typeof conflict?.fatalities === 'number' ? conflict.fatalities : null,
+    conflict_description: conflict?.description || null,
+    conflict_severity: conflict?.severity || null,
+  };
+}
+
+async function analyzeArticleWithGroq(article: ArticleRow, groqApiKey: string): Promise<ArticleRow> {
+  const prompt = [
+    'You are a Hungarian-language geopolitical and economic news analyst.',
+    'Analyze this RSS article and return only valid JSON.',
+    'Schema:',
+    '{',
+    '  "summary": "short Hungarian summary",',
+    '  "warning_level": "high|medium|low",',
+    '  "sentiment_score": number between -1 and 1,',
+    '  "topics": ["topic1", "topic2"],',
+    '  "affects_hungary": boolean,',
+    '  "hungary_impact": "short Hungarian impact explanation",',
+    '  "conflict": { "event_type": "string", "country": "string", "location": "string", "latitude": number, "longitude": number, "description": "string", "severity": "high|medium|low", "fatalities": number }',
+    '}',
+    '',
+    'Rules:',
+    '- Include conflict only when the article describes a concrete current armed conflict, attack, strike, riot, violent unrest, or war-related event.',
+    '- If there is no concrete geolocatable conflict event, omit conflict.',
+    '- Use best-effort coordinates for the specific place; use country-level coordinates only if the article is clearly about a country-wide event.',
+    '- Keep topics to at most 4 items.',
+    '',
+    `Title: ${article.title}`,
+    `Source: ${article.source}`,
+    `Published: ${article.published_at}`,
+    `RSS text: ${article.summary || article.title}`,
+  ].join('\n');
+
+  const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${groqApiKey}`,
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      temperature: 0.2,
+      max_tokens: 500,
+      messages: [
+        {
+          role: 'system',
+          content: 'Return only valid JSON.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    }),
+  }, GROQ_TIMEOUT_MS);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq RSS analysis failed (${response.status}): ${errorText.slice(0, 500)}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (typeof content !== 'string') {
+    throw new Error('Groq RSS analysis returned no content');
+  }
+
+  return normalizeAnalysis(article, JSON.parse(extractJsonObject(content)) as Partial<AnalysisResult>);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -216,6 +380,7 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const groqApiKey = Deno.env.get('GROQ_API_KEY');
 
   if (!supabaseUrl || !serviceRoleKey) {
     return new Response(JSON.stringify({ error: 'Missing required secrets' }), {
@@ -228,6 +393,10 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
   const parser = new Parser();
+
+  if (!groqApiKey) {
+    console.warn('RSS ingest: GROQ_API_KEY is not configured, so RSS articles will be inserted without AI threat/conflict analysis.');
+  }
 
   const feedErrors: Array<{ feed: string; details: ReturnType<typeof serializeError> }> = [];
   const articleMap = new Map<string, ArticleRow>();
@@ -255,6 +424,8 @@ Deno.serve(async (req) => {
     let inserted = 0;
     let duplicatesSkipped = 0;
     let insertFailures = 0;
+    let analysisFailures = 0;
+    let analyzedCount = 0;
 
     for (const article of candidates) {
       const { data: existingArticle, error: existingError } = await supabase
@@ -277,9 +448,23 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      let articleToInsert = article;
+      if (groqApiKey && analyzedCount < MAX_ANALYZED_ARTICLES_PER_RUN) {
+        try {
+          articleToInsert = await analyzeArticleWithGroq(article, groqApiKey);
+          analyzedCount += 1;
+        } catch (error) {
+          analysisFailures += 1;
+          console.error('RSS ingest: AI analysis failed, inserting baseline article', {
+            url: article.url,
+            error: serializeError(error),
+          });
+        }
+      }
+
       const { error: insertError } = await supabase
         .from('articles')
-        .insert(article);
+        .insert(articleToInsert);
 
       if (!insertError) {
         inserted += 1;
@@ -301,7 +486,7 @@ Deno.serve(async (req) => {
       });
       const { error: fallbackInsertError } = await supabase
         .from('articles')
-        .insert(stripOptionalArticleFields(article));
+        .insert(stripOptionalArticleFields(articleToInsert));
 
       if (fallbackInsertError) {
         console.error('RSS ingest: fallback article insert failed', {
@@ -320,6 +505,8 @@ Deno.serve(async (req) => {
       inserted,
       duplicatesSkipped,
       insertFailures,
+      analyzed: analyzedCount,
+      analysisFailures,
       feedErrors,
     }), {
       status: 200,
