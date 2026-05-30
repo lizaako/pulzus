@@ -1,0 +1,25 @@
+name: RSS Ingest Cron
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-rss-ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger rss-ingest Supabase Edge Function
+        run: |
+          response_file="$(mktemp)"
+          status_code="$(curl -sS -o "$response_file" -w "%{http_code}" -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/rss-ingest" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json")"
+
+          cat "$response_file"
+          echo
+
+          if [ "$status_code" -ge 400 ]; then
+            echo "rss-ingest failed with HTTP $status_code"
+            exit 1
+          fi

@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "rss-parser": "https://esm.sh/rss-parser@3.13.0"
+  }
+}
