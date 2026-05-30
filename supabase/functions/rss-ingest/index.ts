@@ -8,13 +8,13 @@ const corsHeaders = {
 };
 
 const RSS_FEEDS = [
-  { url: 'https://feeds.reuters.com/reuters/worldNews', source: 'Reuters World News' },
-  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business News' },
+  { url: 'https://feeds.reuters.com/reuters/worldNews', fallback: 'http://feeds.reuters.com/reuters/worldNews', source: 'Reuters World News' },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', fallback: 'http://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business News' },
   { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC News' },
   { url: 'https://rss.dw.com/rdf/rss-en-all', source: 'Deutsche Welle' },
-  { url: 'https://feeds.skynews.com/feeds/rss/world.rss', source: 'Sky News' },
+  { url: 'https://feeds.skynews.com/feeds/rss/world.rss', fallback: 'http://feeds.skynews.com/feeds/rss/world.rss', source: 'Sky News' },
   { url: 'https://www.aljazeera.com/xml/rss/all.xml', source: 'Al Jazeera' },
-  { url: 'https://feeds.ft.com/ft/rss/home', source: 'Financial Times' },
+  { url: 'https://feeds.ft.com/ft/rss/home', fallback: 'http://feeds.ft.com/ft/rss/home', source: 'Financial Times' },
   { url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'Bloomberg Markets' },
 ];
 
@@ -104,25 +104,43 @@ function shouldRetryWithBaseArticle(error: unknown): boolean {
     || haystack.includes('column');
 }
 
-async function fetchFeedXml(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
-      'User-Agent': 'Pulzus RSS Ingest/1.0',
-    },
-  });
+async function fetchFeedXml(url: string, fallbackUrl?: string): Promise<string> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+        'User-Agent': 'Pulzus RSS Ingest/1.0',
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error(`Status code ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Status code ${response.status}`);
+    }
+
+    return await response.text();
+  } catch (error) {
+    if (!fallbackUrl) throw error;
+
+    console.log(`RSS ingest: primary URL failed, trying fallback: ${fallbackUrl}`);
+    const fallbackResponse = await fetch(fallbackUrl, {
+      headers: {
+        'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+        'User-Agent': 'Pulzus RSS Ingest/1.0',
+      },
+    });
+
+    if (!fallbackResponse.ok) {
+      throw new Error(`Fallback failed with status code ${fallbackResponse.status}`);
+    }
+
+    return await fallbackResponse.text();
   }
-
-  return await response.text();
 }
 
 async function fetchFeedArticles(feed: typeof RSS_FEEDS[number], parser: Parser): Promise<ArticleRow[]> {
   console.log(`RSS ingest: fetching ${feed.source} (${feed.url})`);
 
-  const xml = await fetchFeedXml(feed.url);
+  const xml = await fetchFeedXml(feed.url, (feed as { fallback?: string }).fallback);
   const parsedFeed = await parser.parseString(xml);
   const articles: ArticleRow[] = [];
 

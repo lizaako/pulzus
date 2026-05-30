@@ -116,7 +116,7 @@ function parseGdeltCsv(csvText: string): GdeltEvent[] {
     const sourceUrl = columns[60]?.trim();
     const goldsteinScale = parseNumber(columns[30]?.trim() || '');
 
-    if (!sourceUrl || !sourceUrl.startsWith('http') || goldsteinScale === null || goldsteinScale >= -3) {
+    if (!sourceUrl || !sourceUrl.startsWith('http') || goldsteinScale === null) {
       continue;
     }
 
