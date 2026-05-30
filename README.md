@@ -1,116 +1,101 @@
-# PULZUS
 
-## AI hír-chat backend bekötése
 
-A frontend már tudja hívni a `news-chat` végpontot, de a Groq kulcsot biztonságosan a backendben kell tárolni.
+# PULZUS(MAGYAR)
 
-### 1. Supabase CLI használata
+> AI-alapú hírintelligencia platform — automatizált hírgyűjtés, konfliktustérkép, hangulatelemzés és fact-check valós idejű dashboardon.
 
-Használd `npx`-szel:
+
+[![Dashboard](screenshots/dashboard.png)](https://github.com/lizaako/pulzus/blob/main/fo.png)
+[![Fact-check](screenshots/factcheck.png)](https://github.com/lizaako/pulzus/blob/main/elemzes.png)
+
+---
+
+## Mit csinál?
+
+A **PULZUS** külső forrásokból gyűjti a híreket, AI segítségével feldolgozza őket, és az eredményeket interaktív dashboardon jeleníti meg. Újságíróknak, elemzőknek és olvasóknak készült, akiknek gyorsan kell átlátniuk a világban zajló eseményeket — és azt, hogy egy adott cikknek mennyire lehet hinni.
+
+### Főbb funkciók
+
+- **Élő hírfolyam** — automatikusan, ütemezetten gyűjti és tárolja a cikkeket
+- **3D konfliktuszgömb** — interaktív földgömb, színkódolt konfliktuszónákkal, súlyossági pontszám alapján rangsorolva
+- **Hangulatelemzés** — átlagos szentiment-pontszám a kiválasztott időablak összes cikkére
+- **Szonda (fact-check)** — illessz be egy cikklinket, és az AI visszaad egy ítéletet: igazolt/nem igazolt, forrás-megbízhatóság, politikai besorolás, clickbait-index, manipulációs pontszám és pszichológiai technikák elemzése
+- **Piacok nézet** — gazdasági hírek és országonkénti hatáspontszámok
+- **PDF export** — a dashboard aktuális állapotának exportálása PDF riportként
+- **Időszűrő** — 24 óra / 1 hét / 1 hónap nézetek
+- **Országszűrő** — fókuszálás egy adott ország hírhatására
+
+---
+
+## Tech stack
+
+| Réteg | Technológia |
+|---|---|
+| Frontend | JavaScript, HTML, CSS |
+| Backend | Supabase Edge Functions |
+| Adatbázis | PostgreSQL (Supabase) |
+| AI / LLM | Groq API |
+| Hírforrás | GNews API |
+| Automatizáció | GitHub Actions (ütemezett hírgyűjtés) |
+| Vizualizáció | 3D földgömb, valós idejű grafikonok |
+
+---
+
+## Architektúra
+
+```
+Frontend (dashboard)
+        ↕
+Supabase Edge Functions
+    ↕               ↕
+GNews API       Groq LLM
+    ↓
+PostgreSQL (articles tábla)
+```
+
+A hírgyűjtés GitHub Actions segítségével fut ütemezetten → Postgres-be kerül → Edge Functions-ön keresztül jut el a frontendre → az AI feldolgozás igény szerint történik (chat, fact-check, hangulatelemzés).
+
+---
+
+## Képernyőképek
+
+### Dashboard — konfliktuszgömb + élő hírfolyam
+Valós idejű konfliktuszónák egy 3D-s földgömbön ábrázolva, összetett súlyossági pontszám alapján rangsorolva (cikkszám × szentiment-súly). A jobb oldali panel az utolsó 72 óra legaktívabb konfliktuszónáit mutatja.
+
+### Szonda — AI fact-check
+Illessz be egy cikklinket. A rendszer visszaadja:
+- **Ítélet** (igazolt / nem igazolt) indoklással
+- **Bizonyossági pontszám** (0–100%)
+- **Forrás-megbízhatósági értékelés** és politikai besorolás
+- **Cíelemzés** — clickbait-index és pontossági pontszám
+- **Manipulációs index** — technikánkénti bontás (szenzációhajhászás, érzelmi felerősítés stb.)
+
+---
+
+## Telepítés
 
 ```bash
-npx supabase login
+git clone https://github.com/lizaako/pulzus
+cd pulzus
+npm install
 ```
 
-### 2. Jelentkezz be a Supabase-be
+Hozz létre egy `.env` fájlt:
+
+```env
+SUPABASE_URL=supabase_url
+SUPABASE_ANON_KEY=anon_kulcs
+GNEWS_API_KEY=gnews_kulcs
+GROQ_API_KEY=groq_kulcs
+```
 
 ```bash
-npx supabase login
+npm run dev
 ```
 
-### 3. Linkeld a projektet
+---
 
-```bash
-npx supabase link --project-ref vrquxovkptfigrjsmhng
-```
+## A projektről
 
-### 4. Állítsd be a Groq secretet
-
-```bash
-npx supabase secrets set GROQ_API_KEY=ide_ird_a_sajat_groq_kulcsodat
-```
-
-Fontos:
-- a kulcsot ne tedd `VITE_` változóba
-- ne írd bele frontend fájlba
-- ne tedd bele `index.html`-be
-
-### 5. Deployold az Edge Functiont
-
-```bash
-npx supabase functions deploy news-chat
-```
-
-### 6. Opcionális helyi fejlesztés
-
-Helyi function futtatás:
-
-```bash
-npx supabase functions serve news-chat --env-file .env.example
-```
-
-Ehhez a saját `.env` vagy külön env fájlodban add meg a valódi `GROQ_API_KEY` értéket.
-
-### 7. Frontend végpont
-
-Alapértelmezetten a frontend ezt a Supabase function URL-t próbálja elérni:
-
-```txt
-https://vrquxovkptfigrjsmhng.supabase.co/functions/v1/news-chat
-```
-
-Ha máshova szeretnéd irányítani, állítsd be:
-
-```bash
-VITE_NEWS_CHAT_API_URL=https://sajat-backended.hu/api/news-chat
-```
-
-## A létrehozott fájlok
-
-- `supabase/functions/news-chat/index.ts`
-- `supabase/functions/news-chat/deno.json`
-- `.env.example`
-
-## Mit csinál a function?
-
-- megkapja a kiválasztott cikket és a felhasználó kérdését
-- elküldi a Groq modellnek
-- mindig magyar válaszra utasítja a modellt
-- visszaadja a választ a frontend chatnek
-
-## Élő hírfrissítés 10 percenként
-
-Most már van egy külön hírbetöltő function is:
-
-- `supabase/functions/news-ingest/index.ts`
-
-Ez a function:
-- friss híreket kér le a GNews API-ból
-- Groq-val elemzi őket
-- eltárolja az `articles` táblában
-- kihagyja a már létező URL-eket
-
-### Szükséges secretek
-
-```bash
-npx supabase secrets set GROQ_API_KEY=ide_a_groq_kulcs
-npx supabase secrets set GNEWS_API_KEY=ide_a_gnews_kulcs
-```
-
-### Deploy
-
-```bash
-npx supabase functions deploy news-ingest
-```
-
-### Kézi teszt
-
-```bash
-curl -X POST https://vrquxovkptfigrjsmhng.supabase.co/functions/v1/news-ingest
-```
-
-### Időzítés 10 percre
-
-Futtasd le a [schedule-news-ingest.sql](/home/lizak/2025-26-js-csharp/projektnapok/pulzus/supabase/sql/schedule-news-ingest.sql) tartalmát a Supabase SQL Editorban.
-
-Ez 10 percenként meghívja a `news-ingest` functiont.
+Önállóan fejlesztette egy 16 éves szoftverfejlesztő-tanuló, a Biatorbágyi Innovatív Technikum diákja.  
+**1. helyezés** az iskola startup versenyén — a zsűriben: Bengyel Ádám (Foxpost társalapítója), Gondi Ferenc (CTP Magyarország ügyvezető igazgatója), Budai J. Gergő (Vantage Towers regionális vezérigazgatója) és Mikola Gergely (Provident vállalati kapcsolatok igazgatója).
