@@ -8,17 +8,16 @@ const corsHeaders = {
 };
 
 const RSS_FEEDS = [
-  { url: 'https://feeds.reuters.com/reuters/worldNews', fallback: 'http://feeds.reuters.com/reuters/worldNews', source: 'Reuters World News' },
-  { url: 'https://feeds.reuters.com/reuters/businessNews', fallback: 'http://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business News' },
-  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC News' },
-  { url: 'https://rss.dw.com/rdf/rss-en-all', source: 'Deutsche Welle' },
-  { url: 'https://feeds.skynews.com/feeds/rss/world.rss', fallback: 'http://feeds.skynews.com/feeds/rss/world.rss', source: 'Sky News' },
-  { url: 'https://www.aljazeera.com/xml/rss/all.xml', source: 'Al Jazeera' },
-  { url: 'https://feeds.ft.com/ft/rss/home', fallback: 'http://feeds.ft.com/ft/rss/home', source: 'Financial Times' },
-  { url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'Bloomberg Markets' },
+  { url: 'https://feeds.reuters.com/reuters/worldNews', fallback: 'http://feeds.reuters.com/reuters/worldNews', source: 'RSS - Reuters World News' },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', fallback: 'http://feeds.reuters.com/reuters/businessNews', source: 'RSS - Reuters Business News' },
+  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'RSS - BBC News' },
+  { url: 'https://rss.dw.com/rdf/rss-en-all', source: 'RSS - Deutsche Welle' },
+  { url: 'https://feeds.skynews.com/feeds/rss/world.rss', fallback: 'http://feeds.skynews.com/feeds/rss/world.rss', source: 'RSS - Sky News' },
+  { url: 'https://www.aljazeera.com/xml/rss/all.xml', source: 'RSS - Al Jazeera' },
+  { url: 'https://feeds.ft.com/ft/rss/home', fallback: 'http://feeds.ft.com/ft/rss/home', source: 'RSS - Financial Times' },
+  { url: 'https://feeds.bloomberg.com/markets/news.rss', source: 'RSS - Bloomberg Markets' },
 ];
-const MAX_ARTICLES_PER_RUN = 80;
-const MAX_ANALYZED_ARTICLES_PER_RUN = 20;
+const MAX_ARTICLES_PER_RUN = 20;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_TIMEOUT_MS = 25000;
 
@@ -141,43 +140,6 @@ function shouldRetryWithBaseArticle(error: unknown): boolean {
     || haystack.includes('could not find')
     || haystack.includes('column')
     || haystack.includes('bad request');
-}
-
-function chunkArray<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-
-  return chunks;
-}
-
-async function fetchExistingUrls(supabase: ReturnType<typeof createClient>, urls: string[]): Promise<Set<string>> {
-  const existingUrls = new Set<string>();
-
-  for (const chunk of chunkArray(urls, URL_LOOKUP_CHUNK_SIZE)) {
-    const { data: existingArticles, error: existingError } = await supabase
-      .from('articles')
-      .select('url')
-      .in('url', chunk);
-
-    if (existingError) {
-      console.error('RSS ingest: duplicate URL lookup failed', {
-        chunkSize: chunk.length,
-        firstUrl: chunk[0],
-        error: serializeError(existingError),
-      });
-      throw existingError;
-    }
-
-    for (const item of existingArticles || []) {
-      if (typeof item.url === 'string') {
-        existingUrls.add(item.url);
-      }
-    }
-  }
-
-  return existingUrls;
 }
 
 async function fetchFeedXml(url: string, fallbackUrl?: string): Promise<string> {
@@ -310,29 +272,35 @@ function normalizeAnalysis(article: ArticleRow, parsed: Partial<AnalysisResult>)
 
 async function analyzeArticleWithGroq(article: ArticleRow, groqApiKey: string): Promise<ArticleRow> {
   const prompt = [
-    'You are a Hungarian-language geopolitical and economic news analyst.',
-    'Analyze this RSS article and return only valid JSON.',
-    'Schema:',
+    'Te egy magyar nyelvu geopolitikai es gazdasagi hir-elemzo vagy.',
+    'Egyetlen RSS cikk alapjan kell strukturalt elemzest adnod magyarul.',
+    'Kizarolag ervenyes JSON-t adj vissza komment nelkul.',
+    'A JSON schema:',
     '{',
-    '  "summary": "short Hungarian summary",',
+    '  "summary": "rovid magyar osszefoglalo",',
     '  "warning_level": "high|medium|low",',
-    '  "sentiment_score": number between -1 and 1,',
-    '  "topics": ["topic1", "topic2"],',
-    '  "affects_hungary": boolean,',
-    '  "hungary_impact": "short Hungarian impact explanation",',
-    '  "conflict": { "event_type": "string", "country": "string", "location": "string", "latitude": number, "longitude": number, "description": "string", "severity": "high|medium|low", "fatalities": number }',
+    '  "sentiment_score": -1 es 1 kozotti szam,',
+    '  "topics": ["tema1", "tema2"],',
+    '  "affects_hungary": true vagy false,',
+    '  "hungary_impact": "magyar nyelvu, kozertheto magyarazat",',
+    '  "conflict": { "event_type": "string (pl. Fegyveres konfliktus)", "country": "string", "location": "string", "latitude": float, "longitude": float, "description": "megfelelo leiras a konfliktusrol", "severity": "high|medium|low", "fatalities": int }',
     '}',
     '',
-    'Rules:',
-    '- Include conflict only when the article describes a concrete current armed conflict, attack, strike, riot, violent unrest, or war-related event.',
-    '- If there is no concrete geolocatable conflict event, omit conflict.',
-    '- Use best-effort coordinates for the specific place; use country-level coordinates only if the article is clearly about a country-wide event.',
-    '- Keep topics to at most 4 items.',
+    'Szabalyok:',
+    '- A summary es a hungary_impact mindig magyarul legyen.',
+    '- Ha nincs kozvetlen magyar hatas, akkor affects_hungary legyen false es a hungary_impact legyen rovid magyar mondat.',
+    '- A topics maximum 4 elem legyen, es ne legyen ures.',
+    '- A warning_level high legyen konkret haborus esemeny, eroszakos tamadas, nagy geopolitikai sokk vagy komoly piaci/gazdasagi kockazat eseten.',
+    '- A warning_level medium legyen fontos politikai, gazdasagi, diplomaciai vagy biztonsagi kockazat eseten.',
+    '- A conflict MEZOT CSAK AKKOR HASZNALD, HA a cikk egy jelenlegi konkret fegyveres konfliktusrol, haborurol, tamadasrol, csapasrol, eros zavargasrol vagy geolokalizalhato eroszakos esemenyrol szol.',
+    '- Ha van konkret konfliktus, adj valoszeru koordinatat. Orszagszintu koordinatat csak akkor hasznalj, ha nincs pontosabb hely.',
+    '- Ha a cikk nem fizikai konfliktusrol szol, NE rakj a JSON-ba conflict kulcsot.',
     '',
-    `Title: ${article.title}`,
-    `Source: ${article.source}`,
-    `Published: ${article.published_at}`,
-    `RSS text: ${article.summary || article.title}`,
+    `Cim: ${article.title}`,
+    `Forras: ${article.source}`,
+    `Datum: ${article.published_at}`,
+    '',
+    article.summary || article.title,
   ].join('\n');
 
   const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
@@ -348,7 +316,7 @@ async function analyzeArticleWithGroq(article: ArticleRow, groqApiKey: string): 
       messages: [
         {
           role: 'system',
-          content: 'Return only valid JSON.',
+          content: 'Mindig ervenyes JSON-t adj vissza.',
         },
         {
           role: 'user',
@@ -382,7 +350,7 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const groqApiKey = Deno.env.get('GROQ_API_KEY');
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !serviceRoleKey || !groqApiKey) {
     return new Response(JSON.stringify({ error: 'Missing required secrets' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -393,10 +361,6 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
   const parser = new Parser();
-
-  if (!groqApiKey) {
-    console.warn('RSS ingest: GROQ_API_KEY is not configured, so RSS articles will be inserted without AI threat/conflict analysis.');
-  }
 
   const feedErrors: Array<{ feed: string; details: ReturnType<typeof serializeError> }> = [];
   const articleMap = new Map<string, ArticleRow>();
@@ -448,18 +412,17 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      let articleToInsert = article;
-      if (groqApiKey && analyzedCount < MAX_ANALYZED_ARTICLES_PER_RUN) {
-        try {
-          articleToInsert = await analyzeArticleWithGroq(article, groqApiKey);
-          analyzedCount += 1;
-        } catch (error) {
-          analysisFailures += 1;
-          console.error('RSS ingest: AI analysis failed, inserting baseline article', {
-            url: article.url,
-            error: serializeError(error),
-          });
-        }
+      let articleToInsert: ArticleRow;
+      try {
+        articleToInsert = await analyzeArticleWithGroq(article, groqApiKey);
+        analyzedCount += 1;
+      } catch (error) {
+        analysisFailures += 1;
+        console.error('RSS ingest: AI analysis failed, skipping article', {
+          url: article.url,
+          error: serializeError(error),
+        });
+        continue;
       }
 
       const { error: insertError } = await supabase

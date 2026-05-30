@@ -10,7 +10,7 @@ const LAST_UPDATE_URLS = [
   'https://data.gdeltproject.org/gdeltv2/lastupdate.txt',
   'http://data.gdeltproject.org/gdeltv2/lastupdate.txt',
 ];
-const DEFAULT_GOLDSTEIN_THRESHOLD = -1.5;
+const DEFAULT_GOLDSTEIN_THRESHOLD = 0;
 const MAX_TITLE_FETCHES = 80;
 const TITLE_FETCH_TIMEOUT_MS = 7000;
 
@@ -119,13 +119,9 @@ function parseGdeltCsv(csvText: string, goldsteinThreshold: number): GdeltEvent[
 
     const columns = parseDelimitedLine(line, '\t');
     const sourceUrl = columns[60]?.trim();
-    let goldsteinScale = parseNumber(columns[30]?.trim() || '');
-    const originalGoldsteinScale = goldsteinScale;
-    if (goldsteinScale !== null && goldsteinScale < goldsteinThreshold && goldsteinScale >= -3) {
-      goldsteinScale = -3.01;
-    }
+    const goldsteinScale = parseNumber(columns[30]?.trim() || '');
 
-    if (!sourceUrl || !sourceUrl.startsWith('http') || goldsteinScale === null) {
+    if (!sourceUrl || !sourceUrl.startsWith('http') || goldsteinScale === null || goldsteinScale >= goldsteinThreshold) {
       continue;
     }
 
@@ -140,7 +136,7 @@ function parseGdeltCsv(csvText: string, goldsteinThreshold: number): GdeltEvent[
       lat: parseNumber(columns[57]?.trim() || ''),
       lng: parseNumber(columns[58]?.trim() || ''),
       event_code: columns[26]?.trim() || null,
-      goldstein_scale: originalGoldsteinScale ?? goldsteinScale,
+      goldstein_scale: goldsteinScale,
       source_url: sourceUrl,
     });
   }
@@ -390,6 +386,12 @@ Deno.serve(async (req) => {
       processedEvents: limitedEvents.length,
       articlesInserted: newArticles.length,
       gdeltEventsUpserted: eventRows.length,
+      sampleEvents: limitedEvents.slice(0, 3).map((event) => ({
+        eventDate: event.event_date,
+        countryCode: event.country_code,
+        goldsteinScale: event.goldstein_scale,
+        sourceUrl: event.source_url,
+      })),
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
