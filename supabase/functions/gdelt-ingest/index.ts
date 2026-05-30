@@ -29,6 +29,12 @@ interface ArticleRow {
   content: string | null;
   published_at: string;
   source: string;
+  sentiment_score?: number;
+  topics?: string[];
+  affects_hungary?: boolean;
+  hungary_impact?: string;
+  warning_level?: string;
+  summary?: string;
 }
 
 function serializeError(error: unknown) {
@@ -37,6 +43,16 @@ function serializeError(error: unknown) {
       message: error.message,
       name: error.name,
       stack: error.stack,
+    };
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const maybeError = error as Record<string, unknown>;
+    return {
+      message: typeof maybeError.message === 'string' ? maybeError.message : JSON.stringify(maybeError),
+      code: typeof maybeError.code === 'string' ? maybeError.code : undefined,
+      details: typeof maybeError.details === 'string' ? maybeError.details : undefined,
+      hint: typeof maybeError.hint === 'string' ? maybeError.hint : undefined,
     };
   }
 
@@ -177,6 +193,33 @@ function decodeHtmlEntities(value: string): string {
     .replace(/&#x27;/g, "'");
 }
 
+function stripOptionalArticleFields(article: ArticleRow) {
+  const {
+    sentiment_score: _sentimentScore,
+    topics: _topics,
+    affects_hungary: _affectsHungary,
+    hungary_impact: _hungaryImpact,
+    warning_level: _warningLevel,
+    summary: _summary,
+    ...baseArticle
+  } = article;
+
+  return baseArticle;
+}
+
+function shouldRetryWithBaseArticle(error: unknown): boolean {
+  const serialized = serializeError(error);
+  const haystack = [
+    serialized.message,
+    serialized.details,
+    serialized.hint,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return haystack.includes('schema cache')
+    || haystack.includes('could not find')
+    || haystack.includes('column');
+}
+
 async function fetchArticleTitle(url: string): Promise<string> {
   try {
     const response = await fetchWithTimeout(url, TITLE_FETCH_TIMEOUT_MS);
@@ -271,6 +314,14 @@ Deno.serve(async (req) => {
         content: null,
         published_at: event.event_date,
         source: 'GDELT',
+        sentiment_score: Math.max(-1, event.goldstein_scale / 10),
+        topics: event.event_code ? [`GDELT ${event.event_code}`] : ['GDELT'],
+        affects_hungary: event.country_code === 'HU',
+        hungary_impact: event.country_code === 'HU'
+          ? 'GDELT szerint Magyarorszaghoz kapcsolodo negativ esemeny.'
+          : 'GDELT ingest: nincs automatikus magyar hataselemzes ehhez az esemenyhez.',
+        warning_level: event.goldstein_scale <= -7 ? 'high' : 'medium',
+        summary: `GDELT significant negative event. Country: ${event.country_code || 'unknown'}, event code: ${event.event_code || 'unknown'}, Goldstein scale: ${event.goldstein_scale}.`,
       });
     }
 
@@ -293,7 +344,18 @@ Deno.serve(async (req) => {
         .from('articles')
         .insert(newArticles);
 
-      if (articlesError) throw articlesError;
+      if (articlesError) {
+        if (!shouldRetryWithBaseArticle(articlesError)) {
+          throw articlesError;
+        }
+
+        console.warn('GDELT ingest: retrying article insert with base columns only', serializeError(articlesError));
+        const { error: fallbackArticlesError } = await supabase
+          .from('articles')
+          .insert(newArticles.map(stripOptionalArticleFields));
+
+        if (fallbackArticlesError) throw fallbackArticlesError;
+      }
     }
     console.log(`GDELT ingest: inserted ${newArticles.length} new article(s)`);
 

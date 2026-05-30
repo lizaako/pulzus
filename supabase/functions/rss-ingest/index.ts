@@ -24,6 +24,12 @@ interface ArticleRow {
   content: string | null;
   published_at: string;
   source: string;
+  sentiment_score?: number;
+  topics?: string[];
+  affects_hungary?: boolean;
+  hungary_impact?: string;
+  warning_level?: string;
+  summary?: string;
 }
 
 function serializeError(error: unknown) {
@@ -32,6 +38,16 @@ function serializeError(error: unknown) {
       message: error.message,
       name: error.name,
       stack: error.stack,
+    };
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const maybeError = error as Record<string, unknown>;
+    return {
+      message: typeof maybeError.message === 'string' ? maybeError.message : JSON.stringify(maybeError),
+      code: typeof maybeError.code === 'string' ? maybeError.code : undefined,
+      details: typeof maybeError.details === 'string' ? maybeError.details : undefined,
+      hint: typeof maybeError.hint === 'string' ? maybeError.hint : undefined,
     };
   }
 
@@ -61,10 +77,53 @@ function normalizeUrl(value: unknown): string | null {
   return trimmed;
 }
 
+function stripOptionalArticleFields(article: ArticleRow) {
+  const {
+    sentiment_score: _sentimentScore,
+    topics: _topics,
+    affects_hungary: _affectsHungary,
+    hungary_impact: _hungaryImpact,
+    warning_level: _warningLevel,
+    summary: _summary,
+    ...baseArticle
+  } = article;
+
+  return baseArticle;
+}
+
+function shouldRetryWithBaseArticle(error: unknown): boolean {
+  const serialized = serializeError(error);
+  const haystack = [
+    serialized.message,
+    serialized.details,
+    serialized.hint,
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return haystack.includes('schema cache')
+    || haystack.includes('could not find')
+    || haystack.includes('column');
+}
+
+async function fetchFeedXml(url: string): Promise<string> {
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+      'User-Agent': 'Pulzus RSS Ingest/1.0',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Status code ${response.status}`);
+  }
+
+  return await response.text();
+}
+
 async function fetchFeedArticles(feed: typeof RSS_FEEDS[number], parser: Parser): Promise<ArticleRow[]> {
   console.log(`RSS ingest: fetching ${feed.source} (${feed.url})`);
 
-  const parsedFeed = await parser.parseURL(feed.url);
+  const xml = await fetchFeedXml(feed.url);
+  const parsedFeed = await parser.parseString(xml);
   const articles: ArticleRow[] = [];
 
   for (const item of parsedFeed.items || []) {
@@ -82,6 +141,12 @@ async function fetchFeedArticles(feed: typeof RSS_FEEDS[number], parser: Parser)
       content: cleanText(item.contentSnippet) || cleanText(item.content) || cleanText(item.summary) || cleanText(item.description),
       published_at: asIsoDate(item.isoDate || item.pubDate),
       source: feed.source,
+      sentiment_score: 0,
+      topics: [],
+      affects_hungary: false,
+      hungary_impact: 'RSS ingest: nincs automatikus magyar hataselemzes ehhez a cikkhez.',
+      warning_level: 'low',
+      summary: cleanText(item.contentSnippet) || cleanText(item.summary) || cleanText(item.description) || title,
     });
   }
 
@@ -150,7 +215,18 @@ Deno.serve(async (req) => {
         .from('articles')
         .insert(newArticles);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (!shouldRetryWithBaseArticle(insertError)) {
+          throw insertError;
+        }
+
+        console.warn('RSS ingest: retrying insert with base article columns only', serializeError(insertError));
+        const { error: fallbackInsertError } = await supabase
+          .from('articles')
+          .insert(newArticles.map(stripOptionalArticleFields));
+
+        if (fallbackInsertError) throw fallbackInsertError;
+      }
     }
 
     return new Response(JSON.stringify({
