@@ -97,5 +97,5 @@ npm run dev
 
 ## A projektről
 
-Önállóan fejlesztette egy 16 éves szoftverfejlesztő-tanuló, a Biatorbágyi Innovatív Technikum diákja.  
+Önállóan fejlesztette egy szoftverfejlesztő-tanuló, a Biatorbágyi Innovatív Technikum diákja.  
 **1. helyezés** az iskola startup versenyén — a zsűriben: Bengyel Ádám (Foxpost társalapítója), Gondi Ferenc (CTP Magyarország ügyvezető igazgatója), Budai J. Gergő (Vantage Towers regionális vezérigazgatója) és Mikola Gergely (Provident vállalati kapcsolatok igazgatója).
